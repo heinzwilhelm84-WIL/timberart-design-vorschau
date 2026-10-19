@@ -134,3 +134,11 @@ auf eigene Dateien eingeschränkt. Originale auf Drive bleiben unverändert.
 
 Import, eindeutige Originalzuordnung, Erweiterung um neue Drive-Ordner, Prüfbefehle
 und Einschränkungen: [docs/motifs-import.md](docs/motifs-import.md).
+
+## Vorbereitete Drive-Synchronisierung
+
+Branch `feature/drive-sync-automatik`: stabile Kategoriezuordnung, authentifizierter
+inkrementeller Import und manuelle Inventur/Entwurfs-PR-Erstellung mit WIF.
+Der Stundenplan ist nicht aktiviert; keine Live-Synchronisierung wurde ausgeführt.
+Ablauf, Berechtigungen, Offline-Prüfungen und kontrollierte Inbetriebnahme:
+[docs/drive-sync.md](docs/drive-sync.md).

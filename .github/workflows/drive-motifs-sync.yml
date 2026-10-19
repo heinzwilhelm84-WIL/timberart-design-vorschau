@@ -1,0 +1,129 @@
+name: Google Drive – prepare motif sync PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'inventory = metadata only; prepare-pr = read images and prepare a draft PR'
+        required: true
+        default: inventory
+        type: choice
+        options:
+          - inventory
+          - prepare-pr
+  # Future hourly schedule: cron '17 * * * *'. Intentionally NOT enabled.
+  # Activate only after explicit approval; the prepare job already handles schedule.
+
+permissions: {}
+
+concurrency:
+  group: timberart-drive-motifs-sync
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'inventory' &&
+          github.repository == 'heinzwilhelm84-WIL/timberart-design-vorschau' &&
+          github.repository_id == '1425353605' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout trusted inventory code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Install the pinned free image library
+        run: python3 -m pip install --disable-pip-version-check -r tools/requirements-images.txt
+      - name: Authenticate with metadata-only scope
+        id: google-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: banded-meridian-424821-j9
+          workload_identity_provider: projects/949832006175/locations/global/workloadIdentityPools/timberart-github-sync/providers/timberart-github-actions
+          service_account: timberart-drive-sync@banded-meridian-424821-j9.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive.metadata.readonly
+          access_token_lifetime: 900s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Inventory without downloads or repository writes
+        env:
+          TIMBERART_DRIVE_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+        run: python3 -B tools/drive_sync.py --report "$RUNNER_TEMP/drive-sync-report.md"
+      - name: Show sanitized inventory
+        run: cat "$RUNNER_TEMP/drive-sync-report.md" >> "$GITHUB_STEP_SUMMARY"
+
+  prepare:
+    if: >-
+      ${{ ((github.event_name == 'workflow_dispatch' && inputs.mode == 'prepare-pr') || github.event_name == 'schedule') &&
+          github.repository == 'heinzwilhelm84-WIL/timberart-design-vorschau' &&
+          github.repository_id == '1425353605' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout trusted main code at the dispatched commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install the pinned free image library
+        run: python3 -m pip install --disable-pip-version-check -r tools/requirements-images.txt
+
+      - name: Read pending PR data without checking out its code
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/drive_sync_guard.py --seed
+
+      - name: Obtain a short-lived WIF token with the required read scope
+        id: google-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: banded-meridian-424821-j9
+          workload_identity_provider: projects/949832006175/locations/global/workloadIdentityPools/timberart-github-sync/providers/timberart-github-actions
+          service_account: timberart-drive-sync@banded-meridian-424821-j9.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive.readonly
+          access_token_lifetime: 3600s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Prepare previews and metadata transactionally
+        env:
+          TIMBERART_DRIVE_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+        run: python3 -B tools/drive_sync.py --apply --report "$RUNNER_TEMP/drive-sync-report.md"
+
+      - name: Show sanitized change report
+        run: cat "$RUNNER_TEMP/drive-sync-report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate public outputs before staging
+        run: python3 -B tools/drive_sync_guard.py
+
+      - name: Create or update the generated-data draft PR
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
+        with:
+          token: ${{ github.token }}
+          base: main
+          branch: bot/drive-motifs-sync
+          delete-branch: false
+          draft: always-true
+          title: 'Motivkatalog aus Google Drive aktualisieren'
+          commit-message: 'Update generated motif previews and category mapping'
+          body-path: ${{ runner.temp }}/drive-sync-report.md
+          add-paths: |
+            catalog.json
+            data/categories.json
+            data/motifs-manifest.json
+            data/drive-sync-state.json
+            assets/motifs/
