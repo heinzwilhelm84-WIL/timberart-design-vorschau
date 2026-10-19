@@ -62,6 +62,7 @@ function studioHome() {
 }
 async function studioNavigate(view, category='all') {
     if (!personalLeave(view)) return;
+    transformUnmount();
     personalNotice('');
     const request = ++studio.request;
     studio.view=view;studio.category=category;studio.query='';studioNavigation();
