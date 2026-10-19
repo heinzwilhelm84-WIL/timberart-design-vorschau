@@ -67,9 +67,10 @@
             <span>TimberArt<span class="brand-caption">DESIGN STUDIO</span></span>
         </button>
         <nav id="navContainer" aria-label="Hauptnavigation"></nav>
-        <span class="studio-note">Mit Liebe. Für dich.</span>
+        <button class="action consultation-reset" onclick="newConsultation()">Neue Beratung</button>
         <img id="logo" class="source-logo" alt="TimberArt Logo" hidden>
     </header>
+    <p id="personalStatus" class="personal-status" role="status" aria-live="polite"></p>
     <main id="studioMain"><div id="content" tabindex="-1"></div></main>
     <footer class="studio-footer"><button class="footer-brand" onclick="studioNavigate('home')">TimberArt <span>Design Studio</span></button><p>Aus einer kleinen Idee wird etwas ganz Persönliches.</p><span>Entdecken. Ausprobieren. Freude schenken.</span></footer>
     <div id="imageModal" class="modal">
@@ -78,6 +79,7 @@
             <img id="modalImage" src="" alt="Design" style="width: 100%; height: auto; margin-bottom: 1rem; border-radius: 8px;">
             <h2 id="modalTitle" style="font-size: 20px; margin-bottom: 0.5rem;"></h2>
             <p id="modalCategory" style="font-size: 12px; color: #666; margin-bottom: 1.5rem;"></p>
+            <button class="action primary" onclick="personalStart(selectedDesign.id)">Personalisieren</button>
             <button class="btn-primary" onclick="closeImageModal(); setTimeout(() => openDesignOrderForm(), 100)">Testbestellung ausprobieren</button>
         </div>
     </div>
@@ -98,6 +100,7 @@
                 <div id="fontNameDisplay" style="text-align: center; margin-bottom: 1.5rem;"><strong id="selectedFontName" style="font-size: 18px; color: #2d5016;"></strong></div>
                 <div class="modal-buttons">
                     <button class="btn-secondary" onclick="closeModal()">Abbrechen</button>
+                    <button class="action primary" onclick="personalFromFont()">Mit Motiv kombinieren</button>
                     <button class="btn-primary" onclick="nextStep()">Diese Schrift auswählen</button>
                 </div>
             </div>
@@ -197,7 +200,7 @@
         function closeDesignOrderForm() { document.getElementById('designOrderModal').classList.remove('active'); }
         function openFontModal(index) { const font = FONTS[index]; selectedFont = { ...font, index: index + 1, customText: "HEINZ" }; document.getElementById("customText").value = "HEINZ"; document.getElementById("customText").oninput = updateLivePreview; document.getElementById("selectedFontName").textContent = `${font.name} (#${index + 1})`; updateLivePreview(); document.getElementById("step1").classList.add("active"); document.getElementById("step2").classList.remove("active"); document.getElementById("modal").classList.add("active"); }
         function updateLivePreview() { const text = document.getElementById("customText").value || "HEINZ"; selectedFont.customText = text; const preview = document.getElementById("livePreview"); const alphabet = document.getElementById("alphabetPreview"); preview.style.fontFamily = selectedFont.family; alphabet.style.fontFamily = selectedFont.family; preview.textContent = text; alphabet.textContent = "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 !@#$%^&*()"; }
-        function nextStep() { if (!selectedFont) return; document.getElementById("step1").classList.remove("active"); document.getElementById("step2").classList.add("active"); const summary = document.getElementById("selection-summary"); summary.innerHTML = `<strong style="display: block; margin-bottom: 0.5rem;">✅ Gewählte Schrift:</strong><div style="font-family: ${selectedFont.family}; font-size: 48px; margin-bottom: 1rem; line-height: 1.4; word-break: break-word;">${selectedFont.customText}</div><div style="font-size: 14px; color: #666;"><strong>${selectedFont.name}</strong> (Schrift #${selectedFont.index})<br><span style="font-size: 12px;">Dein Text: "${selectedFont.customText}"</span></div>`; }
+        function nextStep() { if (!selectedFont) return; document.getElementById("step1").classList.remove("active"); document.getElementById("step2").classList.add("active"); const summary = document.getElementById("selection-summary"); summary.innerHTML = `<strong style="display: block; margin-bottom: 0.5rem;">✅ Gewählte Schrift:</strong><div style="font-family: ${selectedFont.family}; font-size: 48px; margin-bottom: 1rem; line-height: 1.4; word-break: break-word;">${studioEscape(selectedFont.customText)}</div><div style="font-size: 14px; color: #666;"><strong>${selectedFont.name}</strong> (Schrift #${selectedFont.index})<br><span style="font-size: 12px;">Dein Text: "${studioEscape(selectedFont.customText)}"</span></div>`; }
         function previousStep() { document.getElementById("step1").classList.add("active"); document.getElementById("step2").classList.remove("active"); }
         function closeModal() { document.getElementById("modal").classList.remove("active"); selectedFont = null; }
         function previewOrder(e) {
@@ -223,5 +226,6 @@
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeImageModal(); closeDesignOrderForm(); closeModal(); } });
     </script>
     <script src="studio.js"></script>
+    <script src="personal.js"></script>
 </body>
 </html>
