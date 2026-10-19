@@ -20,8 +20,8 @@ function studioLabel(category) { return CATEGORY_STYLE[category]?.[0] || categor
 function studioPrettyName(name) { return name.replace(/^\d+[_-]/, '').replace(/_/g, ' '); }
 function studioNavigation() {
     document.getElementById('navContainer').innerHTML = [
-        ['home','Entdecken'],['motifs','Motive'],['schriften','Schriftatelier'],['favorites',`${studioIcon('heart')} Favoriten <span class="nav-count">${favorites.length}</span>`]
-    ].map(([view,label]) => `<button type="button" class="nav-btn ${studio.view===view?'active':''}" data-view="${view}" ${studio.view===view?'aria-current="page"':''} onclick="studioNavigate('${view}')">${label}</button>`).join('') + `<span class="nav-btn map-placeholder" aria-label="Designmappe, in Vorbereitung">${studioIcon('folder')} Designmappe <span class="soon">BALD</span></span>`;
+        ['home','Entdecken'],['motifs','Motive'],['schriften','Schriftatelier'],['favorites',`${studioIcon('heart')} Favoriten <span class="nav-count">${favorites.length}</span>`],['map',`${studioIcon('folder')} Designmappe <span class="nav-count">${personal.drafts.length}</span>`],...(personal.current && personal.picking ? [['editor','Entwurf fortsetzen']] : [])
+    ].map(([view,label]) => `<button type="button" class="nav-btn ${studio.view===view?'active':''}" data-view="${view}" ${studio.view===view?'aria-current="page"':''} onclick="studioNavigate('${view}')">${label}</button>`).join('');
 }
 async function initStudio() {
     // Keep the existing localStorage key and favorite IDs.
@@ -61,10 +61,17 @@ function studioHome() {
     document.querySelectorAll('.category-open').forEach(btn=>btn.addEventListener('click',()=>studioNavigate('motifs',btn.dataset.category)));
 }
 async function studioNavigate(view, category='all') {
+    if (!personalLeave(view)) return;
+    personalNotice('');
     const request = ++studio.request;
     studio.view=view;studio.category=category;studio.query='';studioNavigation();
     if(view==='home') studioHome();
     else if(view==='schriften') studioFonts();
+    else if(view==='editor' || view==='map') {
+        if(studio.loading) await studio.loading;
+        if(request!==studio.request) return;
+        if(view==='editor') personalEditor(); else mapRender();
+    }
     else {
         document.getElementById('content').innerHTML='<div class="loading" role="status"><span class="spinner"></span>Deine Motive werden geladen …</div>';
         if(studio.loading) await studio.loading;
