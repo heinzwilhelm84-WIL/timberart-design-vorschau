@@ -1,6 +1,9 @@
 import http.server,threading,functools,json,pathlib,os,shutil
 from playwright.sync_api import sync_playwright
 ROOT=str(pathlib.Path(__file__).resolve().parents[1])
+EXPECTED=json.loads((pathlib.Path(ROOT)/'catalog.json').read_text())
+EXPECTED_COUNT=len(EXPECTED)
+EXPECTED_CATEGORIES=len({item['category'] for item in EXPECTED})
 SCREENSHOTS=os.environ.get('TIMBERART_TEST_SCREENSHOTS')
 if SCREENSHOTS:pathlib.Path(SCREENSHOTS).mkdir(parents=True,exist_ok=True)
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -15,17 +18,17 @@ with sync_playwright() as p:
  page.on('pageerror',lambda e:errors.append(str(e)))
  context.on('request',lambda r:posts.append(r.url) if r.method!='GET' else None)
  context.route('https://**/*',lambda r:r.abort())
- def ready():page.wait_for_function('() => typeof studio !== "undefined" && studio.ready && studio.catalog.length===412')
+ def ready():page.wait_for_function('n => typeof studio !== "undefined" && studio.ready && studio.catalog.length===n',arg=EXPECTED_COUNT)
  def nav(view):page.locator('[data-view="'+view+'"]').click()
  def accept():page.once('dialog',lambda d:d.accept())
  def dismiss():page.once('dialog',lambda d:d.dismiss())
  def drafts():return page.evaluate('personal.drafts')
  page.goto(url);ready()
  assert page.evaluate('FONTS.length')==30
- assert page.evaluate('allCategories.length')==9
- nav('motifs');assert page.locator('[data-design]').count()==412
+ assert page.evaluate('allCategories.length')==EXPECTED_CATEGORIES
+ nav('motifs');assert page.locator('[data-design]').count()==EXPECTED_COUNT
  page.locator('#categorySelect').select_option(index=1)
- assert 0<page.locator('[data-design]').count()<412
+ assert 0<page.locator('[data-design]').count()<EXPECTED_COUNT
  page.locator('#categorySelect').select_option('all')
  page.locator('#motifSearch').fill('Hirsch');assert page.locator('[data-design]').count()>0
  page.locator('#motifSearch').fill('')
@@ -66,7 +69,7 @@ with sync_playwright() as p:
   assert page.locator('#saveDraft').bounding_box()['height']>=48
   if SCREENSHOTS:page.screenshot(path=str(pathlib.Path(SCREENSHOTS)/(label+'-editor.png')),full_page=True)
   nav('map');page.locator('#compareDrafts').click()
- print('PASS: 412 motifs / 9 categories / 30 fonts; long multiline/XSS-safe text; motif change; save/reload/edit/duplicate/compare; 3 viewport layouts')
+ print(f'PASS: {EXPECTED_COUNT} motifs / {EXPECTED_CATEGORIES} categories / 30 fonts; long multiline/XSS-safe text; motif change; save/reload/edit/duplicate/compare; 3 viewport layouts')
  # Delete cancelled and confirmed.
  dismiss();page.locator('[data-delete]').first.click();assert len(drafts())==2
  accept();page.locator('[data-delete]').first.click();assert len(drafts())==1
