@@ -98,3 +98,29 @@ Zusätzliche reproduzierbare Prüfungen:
 Touch wurde im Chromium-Browser emuliert. Reale iOS-/Android-Geräte sowie Safari
 und Firefox wurden nicht geprüft. GitHub Pages und bestehende Pull Requests
 werden durch diesen Branch nicht verändert; kein Merge oder Deployment.
+
+## Auswahlabhängige Bearbeitungswerkzeuge
+
+Branch `feature/textauswahl-werkzeuge`: Der Editor startet mit einer Vorschau
+ohne Auswahlrahmen, Griffe oder Raster. Klick/Tap auf den Text wählt ihn aus und
+zeigt Rahmen, Griffe, Raster sowie die Positions-/Grössen-/Drehregler. Klick/Tap
+auf einen anderen Bereich hebt die Auswahl wieder auf. Beim Benutzen der Griffe
+und zugehörigen Regler bleibt sie erhalten; Formulare und Schriftwahl funktionieren
+weiterhin mit dem ersten Klick/Tap. Die Auswahl wird erst beim abgeschlossenen
+Klick aufgehoben, damit eingeklappte Werkzeuge auf kleinen Bildschirmen nicht das
+angetippte Bedienelement vor dem Klick verschieben.
+
+Tastaturfokus auf dem Text wählt ihn ebenfalls aus. Escape hebt die Auswahl auf;
+während einer laufenden Geste verwirft Escape zuerst nur diese Geste. Auswahl
+und Sichtbarkeit der Werkzeuge sind flüchtiger Oberflächenzustand und werden
+nicht gespeichert. Gespeicherte Position, Skalierung und Drehung bleiben beim
+Abwählen unverändert. Das erneute Öffnen eines Entwurfs beginnt ohne Auswahl.
+Designmappen-Karten und der Vergleich zeigen grundsätzlich keine Werkzeuge;
+„Bearbeiten“ öffnet den Editor, in dem der Text gezielt ausgewählt werden kann.
+
+`python3 -B tests/selection_check.py` prüft Auswählen/Abwählen, erneutes Auswählen,
+Maus-/Touch-Gesten, Werkzeugbedienung, den ersten Tap auf Eingaben/Schriften,
+Tastatur, unveränderte Geometrie und Speicherung, saubere Vorschau-/Vergleichs-
+ansichten und Beratungsreset bei 1440, 820 und 390 Pixeln in Chromium. Zusätzlich
+bleiben die bisherigen Funktions-, Transformations- und Bestellsperrentests aktiv.
+Reale Geräte, Safari und Firefox wurden nicht geprüft.
