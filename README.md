@@ -8,9 +8,9 @@ Separate Vorschau aus `heinzwilhelm84-WIL/timberart-design`, Branch
 - Content Security Policy blockiert Formularübermittlungen und externe JavaScript-Netzwerkanfragen.
 - Google-API-Schlüssel und Formspree-Konfiguration wurden entfernt.
 - `catalog.json` enthält eine Momentaufnahme von 412 Motiven in 9 Kategorien.
-  Bilder werden weiterhin von Google Drive geladen; Schriften von Google Fonts.
+  Alle Motivbilder kommen lokal aus `assets/motifs/`; Schriften von Google Fonts.
 - Keine ursprüngliche Git-Historie übernommen. Das Quellrepository bleibt unverändert.
-- GitHub Pages wird nicht aktiviert; keine Deployment-Workflows enthalten.
+- Dieser Entwicklungsbranch ändert keine Pages-Einstellungen und enthält keine Deployment-Workflows.
 
 Lokal ansehen: `python3 -m http.server 8000`, dann http://localhost:8000 öffnen.
 
@@ -32,7 +32,7 @@ Tabs wird nicht unterstützt. Speicherfehler werden gemeldet; ungespeicherte
 Änderungen werden beim Verlassen geschützt.
 
 Die Vorschau ist keine Produktions-/Gravurdatei; ältere Entwürfe behalten ihre bisherige Anordnung, bis sie ausdrücklich bearbeitet und gespeichert werden.
-Bilder und Schriften benötigen weiterhin Internet. Fehlende Motivbilder und
+Lokale Motivbilder benötigen keinen Google-Zugriff. Google-Schriften benötigen Internet. Fehlende Motivbilder und
 Schriften werden kenntlich gemacht. Testbestellungen bleiben gesperrt.
 
 ### Browserprüfung
@@ -81,7 +81,7 @@ Breite und Höhe gemeinsam. Keine Scherung, Perspektive oder Millimeterangaben.
 Ein-Finger-Griffe werden unterstützt, keine Zwei-Finger-Pinch-/Drehgesten.
 Ausserhalb des Textes und der Griffe kann die Seite normal gescrollt werden.
 Die App benötigt einen modernen Browser mit Pointer Events und ResizeObserver.
-Bilder/Schriften kommen weiterhin aus den vorhandenen externen Quellen. Bei
+Motivbilder kommen aus lokalen WebP-Dateien, Schriften weiterhin von Google Fonts. Bei
 fehlender Originalschrift kann sich das Schriftbild der Ersatzschrift ändern;
 die gespeicherten Positionen und Transformationswerte bleiben erhalten.
 
@@ -124,3 +124,13 @@ Tastatur, unveränderte Geometrie und Speicherung, saubere Vorschau-/Vergleichs-
 ansichten und Beratungsreset bei 1440, 820 und 390 Pixeln in Chromium. Zusätzlich
 bleiben die bisherigen Funktions-, Transformations- und Bestellsperrentests aktiv.
 Reale Geräte, Safari und Firefox wurden nicht geprüft.
+
+## Lokale Motivbilder
+
+Branch `feature/lokale-motivbilder`: 412 unveränderte Motiv-IDs mit jeweils zwei
+verlustfreien WebP-Bildschirmpreviews (maximale Kantenlänge 600/1600 Pixel). Alle
+Ansichten verwenden lokale relative URLs, ohne Drive-Fallback. Die Bild-CSP wurde
+auf eigene Dateien eingeschränkt. Originale auf Drive bleiben unverändert.
+
+Import, eindeutige Originalzuordnung, Erweiterung um neue Drive-Ordner, Prüfbefehle
+und Einschränkungen: [docs/motifs-import.md](docs/motifs-import.md).

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "roots": [
+    {
+      "folderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
+      "recursive": true,
+      "includeRootImages": false,
+      "excludeFolderNamesContaining": [
+        "LOGO",
+        "Schriften"
+      ]
+    }
+  ],
+  "imageMimeTypes": [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif"
+  ],
+  "deleteMissing": false
+}
