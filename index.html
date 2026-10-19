@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TESTVERSION – TimberArt Design Studio</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://drive.google.com https://*.googleusercontent.com; connect-src 'self'; form-action 'none'; object-src 'none'; base-uri 'self'">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Bebas+Neue&family=Oswald:wght@400;600&family=Libre+Franklin:wght@400;600&family=Braah+One&family=Lilita+One&family=Playfair+Display:wght@400;600&family=Great+Vibes&family=Lobster&family=Bona+Nova:wght@400;600&family=Boogaloo&family=Pacifico&family=Roboto+Slab:wght@400;600&family=Fredoka:wght@400;600&family=Bubblegum+Sans&family=Lily+Script+One&family=Limelight&family=Libre+Caslon+Text&family=Anton&family=Cinzel:wght@400;600&family=Cinzel+Decorative&family=Permanent+Marker&family=Special+Elite&family=Rye&family=Alfa+Slab+One&family=Black+Ops+One&family=Poppins:wght@400;600&family=Raleway:wght@400;600&family=League+Spartan:wght@400;600&family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f8f6; color: #333; }
+        header { background: white; border-bottom: 1px solid #e0e0e0; padding: 2rem; text-align: center; }
+        header img { height: 96px; margin-bottom: 1rem; }
+        header h1 { font-size: 28px; color: #2d5016; margin-bottom: 0.5rem; }
+        header p { color: #666; font-size: 14px; }
+        nav { background: white; border-bottom: 1px solid #e0e0e0; padding: 1rem 2rem; display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+        nav button { background: none; border: 2px solid #e0e0e0; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s ease; color: #333; }
+        nav button:hover { border-color: #2d5016; color: #2d5016; }
+        nav button.active { background: #2d5016; color: white; border-color: #2d5016; }
+        main { max-width: 100%; padding: 2rem; }
+        .category-title { font-size: 24px; color: #2d5016; margin-bottom: 2rem; text-align: center; }
+        .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5rem; margin-bottom: 3rem; }
+        .design-card, .font-card { background: white; border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.3s ease; border: 1px solid #e0e0e0; position: relative; }
+        .design-card:hover, .font-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(45, 80, 22, 0.12); border-color: #2d5016; }
+        .design-card img, .font-card .preview { width: 100%; height: 200px; object-fit: contain; background: #f9f9f9; display: flex; align-items: center; justify-content: center; }
+        .design-card .info, .font-card .info { padding: 1rem; }
+        .design-card .name, .font-card .name { font-weight: 600; color: #2d5016; margin-bottom: 0.5rem; font-size: 14px; }
+        .design-card .description, .font-card .description { font-size: 13px; color: #666; }
+        .favorite-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+        .favorite-btn:hover { background: white; transform: scale(1.1); }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 2rem; position: relative; }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 24px; cursor: pointer; color: #666; }
+        .modal-close:hover { color: #2d5016; }
+        .modal-step { display: none; }
+        .modal-step.active { display: block; }
+        .modal-step h2 { color: #2d5016; margin-bottom: 1.5rem; font-size: 20px; }
+        .order-form { background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 14px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 14px; }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #2d5016; box-shadow: 0 0 0 3px rgba(45,80,22,0.1); }
+        .btn-primary { background: #2d5016; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background 0.3s ease; width: 100%; }
+        .btn-primary:hover { background: #1f3610; }
+        .btn-secondary { background: #e0e0e0; color: #333; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; margin-right: 0.5rem; }
+        .modal-buttons { display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end; }
+        .design-info { background: #e8f5e9; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #2d5016; }
+        @media (max-width: 1024px) { .grid-5 { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 768px) { .grid-5 { grid-template-columns: repeat(2, 1fr); } header { padding: 1.5rem; } main { padding: 1rem; } }
+        .loading { text-align: center; color: #666; padding: 2rem; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #e0e0e0; border-top-color: #2d5016; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <meta name="theme-color" content="#7160ac">
+    <link rel="stylesheet" href="studio.css">
+</head>
+<body>
+    <aside class="preview-banner" aria-label="Testversion"><strong>TESTVERSION · Unverbindliche Vorschau</strong><span>Keine echten Bestellungen. Formulare werden nur lokal getestet; es werden keine Bestelldaten übermittelt.</span></aside>
+    <noscript><p class="preview-form-note">TESTVERSION: Bestellungen sind deaktiviert. Für die Vorschau bitte JavaScript aktivieren.</p></noscript>
+    <a class="skip-link" href="#content">Zum Inhalt</a>
+    <header class="studio-header">
+        <button class="brand" type="button" onclick="studioNavigate('home')" aria-label="TimberArt Startseite">
+            <span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 4v32M4 20h32M9 9l22 22M9 31 31 9"/></svg></span>
+            <span>TimberArt<span class="brand-caption">DESIGN STUDIO</span></span>
+        </button>
+        <nav id="navContainer" aria-label="Hauptnavigation"></nav>
+        <span class="studio-note">Mit Liebe. Für dich.</span>
+        <img id="logo" class="source-logo" alt="TimberArt Logo" hidden>
+    </header>
+    <main id="studioMain"><div id="content" tabindex="-1"></div></main>
+    <footer class="studio-footer"><button class="footer-brand" onclick="studioNavigate('home')">TimberArt <span>Design Studio</span></button><p>Aus einer kleinen Idee wird etwas ganz Persönliches.</p><span>Entdecken. Ausprobieren. Freude schenken.</span></footer>
+    <div id="imageModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <button class="modal-close" onclick="closeImageModal()">✕</button>
+            <img id="modalImage" src="" alt="Design" style="width: 100%; height: auto; margin-bottom: 1rem; border-radius: 8px;">
+            <h2 id="modalTitle" style="font-size: 20px; margin-bottom: 0.5rem;"></h2>
+            <p id="modalCategory" style="font-size: 12px; color: #666; margin-bottom: 1.5rem;"></p>
+            <button class="btn-primary" onclick="closeImageModal(); setTimeout(() => openDesignOrderForm(), 100)">Testbestellung ausprobieren</button>
+        </div>
+    </div>
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <div id="step1" class="modal-step active">
+                <h2>🔤 Schrift Live-Vorschau</h2>
+                <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 14px;">Dein Text (zum Testen):</label>
+                    <input type="text" id="customText" placeholder="z.B. HEINZ, Haus Müller..." style="width: 100%; padding: 0.75rem; border: 2px solid #2d5016; border-radius: 6px; font-size: 16px;">
+                    <div id="livePreview" style="font-size: 64px; font-weight: 400; margin-top: 1.5rem; padding: 2rem; background: white; border-radius: 6px; text-align: center; min-height: 150px; display: flex; align-items: center; justify-content: center; word-break: break-word; border: 1px solid #e0e0e0;">HEINZ</div>
+                </div>
+                <div style="background: #f0f8f0; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid #2d5016;">
+                    <strong style="display: block; margin-bottom: 1rem; color: #2d5016;">Komplettes Alphabet & Zahlen:</strong>
+                    <div id="alphabetPreview" style="font-size: 24px; line-height: 1.8; word-break: break-word;">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 !@#$%^&*()</div>
+                </div>
+                <div id="fontNameDisplay" style="text-align: center; margin-bottom: 1.5rem;"><strong id="selectedFontName" style="font-size: 18px; color: #2d5016;"></strong></div>
+                <div class="modal-buttons">
+                    <button class="btn-secondary" onclick="closeModal()">Abbrechen</button>
+                    <button class="btn-primary" onclick="nextStep()">Diese Schrift auswählen</button>
+                </div>
+            </div>
+            <div id="step2" class="modal-step">
+                <h2>Testbestellung ausprobieren</h2>
+                <div id="selection-summary" style="background: #e8f5e9; margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; border-left: 4px solid #2d5016;"></div>
+                <p class="preview-form-note">TESTVERSION: Bitte nur Testdaten eingeben. Es wird nichts versendet und keine Bestellung ausgelöst.</p>
+                <form class="order-form" id="orderForm" onsubmit="submitOrder(event)">
+                    <div class="form-group"><label>Name *</label><input type="text" name="name" required></div>
+                    <div class="form-group"><label>Email</label><input type="email" name="email"></div>
+                    <div class="form-group"><label>Telefon</label><input type="tel" name="phone"></div>
+                    <div class="form-group"><label>Nachricht</label><textarea name="message" placeholder="Spezialwünsche..."></textarea></div>
+                    <div class="modal-buttons">
+                        <button type="button" class="btn-secondary" onclick="previousStep()">Zurück</button>
+                        <button type="submit" class="btn-primary">Testbestellung ausprobieren</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="designOrderModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <button class="modal-close" onclick="closeDesignOrderForm()">✕</button>
+            <h2 style="color: #2d5016; margin-bottom: 1.5rem; font-size: 20px;">Testbestellung für Design</h2>
+            <div class="design-info">
+                <strong style="display: block; margin-bottom: 0.5rem;">✅ Gewähltes Design:</strong>
+                <div style="font-size: 14px; color: #333;">
+                    <strong id="designName"></strong><br>
+                    <span style="font-size: 12px; color: #666;">Kategorie: <span id="designCat"></span></span><br>
+                    <a id="designLink" href="" target="_blank" style="font-size: 12px; color: #2d5016; text-decoration: none; font-weight: 600;">Design-Link öffnen →</a>
+                </div>
+            </div>
+            <p class="preview-form-note">TESTVERSION: Bitte nur Testdaten eingeben. Es wird nichts versendet und keine Bestellung ausgelöst.</p>
+                <form class="order-form" id="designOrderForm" onsubmit="submitDesignOrder(event)">
+                <div class="form-group"><label>Name *</label><input type="text" name="name" required></div>
+                <div class="form-group"><label>Email</label><input type="email" name="email"></div>
+                <div class="form-group"><label>Telefon</label><input type="tel" name="phone"></div>
+                <div class="form-group"><label>Nachricht</label><textarea name="message" placeholder="Spezialwünsche..."></textarea></div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-secondary" onclick="closeDesignOrderForm()">Abbrechen</button>
+                    <button type="submit" class="btn-primary">Testbestellung ausprobieren</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        const FONTS = [
+            { name: "Montserrat", family: "Montserrat, sans-serif", desc: "universell, modern", sample: "The quick brown fox" },
+            { name: "Bebas Neue", family: "Bebas Neue, cursive", desc: "kräftige Headlines", sample: "BOLD & STRONG" },
+            { name: "Oswald", family: "Oswald, sans-serif", desc: "schmal, technisch", sample: "SLIM & TIGHT" },
+            { name: "Libre Franklin", family: "Libre Franklin, sans-serif", desc: "sehr sauber", sample: "Clean & Premium" },
+            { name: "Braah One", family: "Braah One, cursive", desc: "kräftig, modern", sample: "POWER TEXT" },
+            { name: "Lilita One", family: "Lilita One, cursive", desc: "Caps, plakativ", sample: "FUN & BOLD" },
+            { name: "Playfair Display", family: "Playfair Display, serif", desc: "elegant", sample: "Elegant & Timeless" },
+            { name: "Great Vibes", family: "Great Vibes, cursive", desc: "elegante Namen", sample: "Beautiful Script" },
+            { name: "Lobster", family: "Lobster, cursive", desc: "dekorative Namen", sample: "Decorative Style" },
+            { name: "Bona Nova", family: "Bona Nova, serif", desc: "klassisch", sample: "Classic & Noble" },
+            { name: "Boogaloo", family: "Boogaloo, cursive", desc: "locker, auffällig", sample: "Fun & Playful" },
+            { name: "Pacifico", family: "Pacifico, cursive", desc: "handschriftlich", sample: "Relaxed Handwriting" },
+            { name: "Roboto Slab", family: "Roboto Slab, serif", desc: "robust", sample: "Strong & Readable" },
+            { name: "Fredoka", family: "Fredoka, sans-serif", desc: "rund, freundlich", sample: "Friendly & Round" },
+            { name: "Bubblegum Sans", family: "Bubblegum Sans, cursive", desc: "verspielt", sample: "Playful & Sweet" },
+            { name: "Lily Script One", family: "Lily Script One, cursive", desc: "weiche Schreibschrift", sample: "Soft Handwriting" },
+            { name: "Limelight", family: "Limelight, cursive", desc: "Art-déco, Retro", sample: "ART DECO STYLE" },
+            { name: "Libre Caslon Text", family: "Libre Caslon Text, serif", desc: "klassisch", sample: "Refined Classic" },
+            { name: "Anton", family: "Anton, sans-serif", desc: "extrem kräftig", sample: "ULTRA BOLD" },
+            { name: "Cinzel", family: "Cinzel, serif", desc: "Wappen", sample: "ROYAL & ELEGANT" },
+            { name: "Cinzel Decorative", family: "Cinzel Decorative, cursive", desc: "dekorative Wappen", sample: "ORNATE & GRAND" },
+            { name: "Permanent Marker", family: "Permanent Marker, cursive", desc: "handgemacht", sample: "Hand Drawn" },
+            { name: "Special Elite", family: "Special Elite, cursive", desc: "Vintage-Look", sample: "Vintage Typewriter" },
+            { name: "Rye", family: "Rye, cursive", desc: "Western", sample: "WILD WEST" },
+            { name: "Alfa Slab One", family: "Alfa Slab One, cursive", desc: "Retro", sample: "RETRO HEAVY" },
+            { name: "Black Ops One", family: "Black Ops One, cursive", desc: "Motorsport", sample: "MILITARY STRONG" },
+            { name: "Poppins", family: "Poppins, sans-serif", desc: "modern", sample: "Modern & Clean" },
+            { name: "Raleway", family: "Raleway, sans-serif", desc: "elegant-modern", sample: "Elegant Modern" },
+            { name: "League Spartan", family: "League Spartan, sans-serif", desc: "Logos", sample: "BOLD GEOMETRIC" },
+            { name: "Orbitron", family: "Orbitron, sans-serif", desc: "futuristisch", sample: "FUTURE TECH" }
+        ];
+        let allDesigns = [], allCategories = [], favorites = [], selectedFont = null, selectedDesign = null;
+        document.addEventListener("DOMContentLoaded", () => initStudio());
+        async function setupNavigation() { await loadAllDesigns(); allCategories = [...new Set(allDesigns.map(d => d.category))].sort(); }
+        function changeCategory(btn, cat) { document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active")); btn.classList.add("active"); loadContent(cat); }
+        async function loadLogo() { /* Preview uses the existing vector brand; no API credentials required. */ }
+        async function loadContent(category) { const content = document.getElementById("content"); if (category === "all") { content.innerHTML = '<div class="loading"><span class="spinner"></span>Lade Inhalte...</div>'; await loadAllDesigns(); renderAllDesigns(); } else if (category === "schriften") { renderFonts(); } else if (category === "favorites") { renderFavorites(); } else if (allCategories.includes(category)) { content.innerHTML = '<div class="loading"><span class="spinner"></span>Lade Designs...</div>'; await loadCategoryDesigns(category); renderCategory(category); } }
+        async function loadAllDesigns() { try { const response = await fetch('./catalog.json'); if (!response.ok) throw new Error('Catalog unavailable'); allDesigns = await response.json(); } catch (e) { console.log('Preview catalog unavailable'); allDesigns = []; } }
+        async function loadCategoryDesigns(categoryName) { await loadAllDesigns(); allDesigns = allDesigns.filter(d => d.category === categoryName); }
+
+        function renderAllDesigns() { const content = document.getElementById("content"); let html = `<h2 class="category-title">Alle Designs</h2><div class="grid-5">`; allDesigns.forEach(item => html += renderDesignCard(item)); html += `</div>`; html += `<h2 class="category-title" style="margin-top: 3rem;">🔤 Verfügbare Schriften</h2><div class="grid-5">`; FONTS.forEach((font, i) => html += renderFontCard(font, i)); html += `</div>`; content.innerHTML = html; }
+        function renderCategory(categoryName) { const content = document.getElementById("content"); let html = `<h2 class="category-title">${categoryName}</h2><div class="grid-5">`; allDesigns.forEach(item => html += renderDesignCard(item)); html += `</div>`; content.innerHTML = html; }
+        function renderDesignCard(design) { const isFavorite = favorites.includes(design.id); return `<div class="design-card" onclick="openImageModal('${design.id}', '${design.name}', '${design.category}')"><button class="favorite-btn" onclick="toggleFavorite(event, '${design.id}');" style="z-index: 10;">${isFavorite ? "❤️" : "🤍"}</button><img src="${design.url}" alt="${design.name}" style="width: 100%; height: 200px; object-fit: contain; background: #f9f9f9;"><div class="info"><div class="name">${design.name}</div><div class="description">${design.category}</div></div></div>`; }
+        function renderFontCard(font, index) { return `<div class="font-card" onclick="openFontModal(${index})"><div class="preview" style="font-family: ${font.family}; font-size: 32px; display: flex; align-items: center; justify-content: center;">${font.sample}</div><div class="info"><div class="name">${font.name}</div><div class="description">Schrift #${index + 1}</div></div></div>`; }
+        function renderFonts() { const content = document.getElementById("content"); let html = '<h2 class="category-title">🔤 Verfügbare Schriften (30)</h2><div class="grid-5">'; FONTS.forEach((font, i) => html += renderFontCard(font, i)); html += '</div>'; content.innerHTML = html; }
+        function renderFavorites() { const content = document.getElementById("content"); if (favorites.length === 0) { content.innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Keine Favoriten gespeichert</p>'; return; } let html = '<h2 class="category-title">❤️ Meine Favoriten</h2><div class="grid-5">'; allDesigns.forEach(design => { if (favorites.includes(design.id)) html += renderDesignCard(design); }); html += '</div>'; content.innerHTML = html; }
+        function openImageModal(imageId, imageName, fullPath) { selectedDesign = { id: imageId, name: imageName, category: fullPath }; document.getElementById('modalImage').src = `https://drive.google.com/thumbnail?id=${imageId}&sz=w1000`; document.getElementById('modalTitle').textContent = imageName; document.getElementById('modalCategory').textContent = fullPath; document.getElementById('imageModal').classList.add('active'); }
+        function closeImageModal() { document.getElementById('imageModal').classList.remove('active'); }
+        function openDesignOrderForm() { if (!selectedDesign) return; document.getElementById('designName').textContent = selectedDesign.name; document.getElementById('designCat').textContent = selectedDesign.category; document.getElementById('designLink').href = `https://drive.google.com/thumbnail?id=${selectedDesign.id}&sz=w1000`; document.getElementById('designOrderModal').classList.add('active'); }
+        function closeDesignOrderForm() { document.getElementById('designOrderModal').classList.remove('active'); }
+        function openFontModal(index) { const font = FONTS[index]; selectedFont = { ...font, index: index + 1, customText: "HEINZ" }; document.getElementById("customText").value = "HEINZ"; document.getElementById("customText").oninput = updateLivePreview; document.getElementById("selectedFontName").textContent = `${font.name} (#${index + 1})`; updateLivePreview(); document.getElementById("step1").classList.add("active"); document.getElementById("step2").classList.remove("active"); document.getElementById("modal").classList.add("active"); }
+        function updateLivePreview() { const text = document.getElementById("customText").value || "HEINZ"; selectedFont.customText = text; const preview = document.getElementById("livePreview"); const alphabet = document.getElementById("alphabetPreview"); preview.style.fontFamily = selectedFont.family; alphabet.style.fontFamily = selectedFont.family; preview.textContent = text; alphabet.textContent = "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 !@#$%^&*()"; }
+        function nextStep() { if (!selectedFont) return; document.getElementById("step1").classList.remove("active"); document.getElementById("step2").classList.add("active"); const summary = document.getElementById("selection-summary"); summary.innerHTML = `<strong style="display: block; margin-bottom: 0.5rem;">✅ Gewählte Schrift:</strong><div style="font-family: ${selectedFont.family}; font-size: 48px; margin-bottom: 1rem; line-height: 1.4; word-break: break-word;">${selectedFont.customText}</div><div style="font-size: 14px; color: #666;"><strong>${selectedFont.name}</strong> (Schrift #${selectedFont.index})<br><span style="font-size: 12px;">Dein Text: "${selectedFont.customText}"</span></div>`; }
+        function previousStep() { document.getElementById("step1").classList.add("active"); document.getElementById("step2").classList.remove("active"); }
+        function closeModal() { document.getElementById("modal").classList.remove("active"); selectedFont = null; }
+        function previewOrder(e) {
+            e.preventDefault();
+            const form = e.target;
+            let status = form.querySelector('.preview-order-status');
+            if (!status) {
+                status = document.createElement('p');
+                status.className = 'preview-form-note preview-order-status';
+                status.setAttribute('role', 'status');
+                status.tabIndex = -1;
+                form.appendChild(status);
+            }
+            status.textContent = 'TESTVERSION: Test abgeschlossen. Es wurden keine Daten versendet und keine Bestellung aufgegeben.';
+            status.focus();
+        }
+        // Also block native submission before inline handlers run.
+        document.addEventListener('submit', e => e.preventDefault(), true);
+        function submitOrder(e) { previewOrder(e); }
+        function submitDesignOrder(e) { previewOrder(e); }
+        function loadFavorites() { const saved = localStorage.getItem("timberart-favorites"); favorites = saved ? JSON.parse(saved) : []; }
+        function toggleFavorite(e, id) { e.stopPropagation(); favorites = favorites.includes(id) ? favorites.filter(f => f !== id) : [...favorites, id]; localStorage.setItem("timberart-favorites", JSON.stringify(favorites)); }
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeImageModal(); closeDesignOrderForm(); closeModal(); } });
+    </script>
+    <script src="studio.js"></script>
+</body>
+</html>
