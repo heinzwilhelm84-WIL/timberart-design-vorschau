@@ -1,0 +1,53 @@
+name: Google Drive – read-only connection check
+
+# Preparation only: no push/PR trigger, schedule, synchronization or deployment.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: drive-readonly-connection-check
+  cancel-in-progress: false
+
+jobs:
+  check-drive-metadata:
+    # Checkout of main alone would NOT change the OIDC ref of a branch run.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' &&
+          github.repository == 'heinzwilhelm84-WIL/timberart-design-vorschau' &&
+          github.repository_id == '1425353605' &&
+          github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Read only the test script and source configuration
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: |
+            /motifs.sources.json
+            /tools/check_drive_connection.py
+          sparse-checkout-cone-mode: false
+
+      - name: Obtain a short-lived metadata-only token using WIF
+        id: google-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: banded-meridian-424821-j9
+          workload_identity_provider: projects/949832006175/locations/global/workloadIdentityPools/timberart-github-sync/providers/timberart-github-actions
+          service_account: timberart-drive-sync@banded-meridian-424821-j9.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive.metadata.readonly
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Verify the root folder and recursively list folder metadata
+        env:
+          TIMBERART_DRIVE_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+        run: python3 -B tools/check_drive_connection.py
