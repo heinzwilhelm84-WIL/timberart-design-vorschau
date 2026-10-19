@@ -17,11 +17,75 @@ function transformPreview(d, full, editable) {
     const motif = studio.catalog.find(m => m.id === d.motifId);
     const font = personalFont(d.fontId);
     const t = textTransform(d.transform);
-    return `<div class="composition transform-composition ${full ? 'composition-large' : ''}"><div class="design-surface ${editable ? 'design-editable' : ''}" ${editable ? 'id="designSurface" aria-label="Gestaltungsfläche für deinen Wunschtext"' : 'role="group" aria-label="Motiv mit gestaltetem Wunschtext"'}><div class="design-plane">${motif ? `<img class="motif-image" src="${studioEscape(motif.url)}" alt="${studioEscape(studioPrettyName(motif.name))}" loading="lazy" draggable="false"><span class="asset-warning" hidden>Motivbild nicht erreichbar. Die Auswahl bleibt gespeichert.</span>` : '<p class="asset-warning">Bitte ein Motiv auswählen.</p>'}<div class="design-text-object" style="left:${t.x * DESIGN_SIZE}px;top:${t.y * DESIGN_SIZE}px;transform:translate(-50%,-50%) rotate(${t.rotation}deg) scale(${t.scale})" ${editable ? 'tabindex="0" data-transform-action="move" role="group" aria-label="Wunschtext verschieben. Pfeiltasten bewegen, Umschalt bewegt schneller." aria-describedby="transformHelp"' : ''}><div class="composition-text" style="font-family:${studioEscape(font.family)}">${studioEscape(d.text || 'Dein Wunschtext')}</div></div></div>${editable ? '<button type="button" class="transform-handle rotate-handle" data-transform-action="rotate" aria-label="Text drehen. Ziehen oder Pfeiltasten verwenden." title="Text drehen">↻</button><button type="button" class="transform-handle scale-handle" data-transform-action="scale" aria-label="Text skalieren. Ziehen oder Pfeiltasten verwenden." title="Text skalieren">⤢</button>' : ''}</div></div>`;
+    return `<div class="composition transform-composition ${full ? 'composition-large' : ''}"><div class="design-surface ${editable ? 'design-editable' : ''}" ${editable ? 'id="designSurface" aria-label="Gestaltungsfläche für deinen Wunschtext"' : 'role="group" aria-label="Motiv mit gestaltetem Wunschtext"'}><div class="design-plane">${motif ? `<img class="motif-image" src="${studioEscape(motif.url)}" alt="${studioEscape(studioPrettyName(motif.name))}" loading="lazy" draggable="false"><span class="asset-warning" hidden>Motivbild nicht erreichbar. Die Auswahl bleibt gespeichert.</span>` : '<p class="asset-warning">Bitte ein Motiv auswählen.</p>'}<div class="design-text-object" style="left:${t.x * DESIGN_SIZE}px;top:${t.y * DESIGN_SIZE}px;transform:translate(-50%,-50%) rotate(${t.rotation}deg) scale(${t.scale})" ${editable ? 'tabindex="0" data-transform-action="move" role="button" aria-pressed="false" aria-controls="transformControls" aria-label="Wunschtext auswählen und verschieben. Pfeiltasten bewegen, Umschalt bewegt schneller." aria-describedby="selectionHelp"' : ''}><div class="composition-text" style="font-family:${studioEscape(font.family)}">${studioEscape(d.text || 'Dein Wunschtext')}</div></div></div>${editable ? '<button type="button" class="transform-handle rotate-handle" hidden data-transform-action="rotate" aria-label="Text drehen. Ziehen oder Pfeiltasten verwenden." title="Text drehen">↻</button><button type="button" class="transform-handle scale-handle" hidden data-transform-action="scale" aria-label="Text skalieren. Ziehen oder Pfeiltasten verwenden." title="Text skalieren">⤢</button>' : ''}</div></div>`;
 }
 function transformControls() {
-    return `<section class="transform-controls" aria-label="Textposition, Grösse und Drehung"><p id="transformHelp">Text mit Maus oder einem Finger ziehen. Mit ⤢ die Grösse ändern, mit ↻ drehen. Alternativ Regler oder Pfeiltasten verwenden.</p><div class="transform-positions"><label for="textX">Horizontal (%)<input type="number" id="textX" min="6" max="94" step="0.1" inputmode="decimal"></label><label for="textY">Vertikal (%)<input type="number" id="textY" min="6" max="94" step="0.1" inputmode="decimal"></label></div><label class="transform-range" for="textScale">Textgrösse <output id="scaleValue" for="textScale"></output><input type="range" id="textScale" min="25" max="300" step="1"></label><label class="transform-range" for="textRotation">Drehung <output id="rotationValue" for="textRotation"></output><input type="range" id="textRotation" min="-180" max="180" step="1"></label><button type="button" class="action" id="resetTransform">Position, Grösse und Drehung zurücksetzen</button><p id="transformAdvice" class="personal-help" role="status"></p></section>`;
+    return `<p id="selectionHelp" class="selection-help" role="status">Text anklicken oder antippen, um ihn zu bearbeiten. Ausserhalb tippen zeigt die Vorschau ohne Werkzeuge.</p><section id="transformControls" class="transform-controls" hidden aria-label="Textposition, Grösse und Drehung"><p id="transformHelp">Text mit Maus oder einem Finger ziehen. Mit ⤢ die Grösse ändern, mit ↻ drehen. Alternativ Regler oder Pfeiltasten verwenden.</p><div class="transform-positions"><label for="textX">Horizontal (%)<input type="number" id="textX" min="6" max="94" step="0.1" inputmode="decimal"></label><label for="textY">Vertikal (%)<input type="number" id="textY" min="6" max="94" step="0.1" inputmode="decimal"></label></div><label class="transform-range" for="textScale">Textgrösse <output id="scaleValue" for="textScale"></output><input type="range" id="textScale" min="25" max="300" step="1"></label><label class="transform-range" for="textRotation">Drehung <output id="rotationValue" for="textRotation"></output><input type="range" id="textRotation" min="-180" max="180" step="1"></label><button type="button" class="action" id="resetTransform">Position, Grösse und Drehung zurücksetzen</button><p id="transformAdvice" class="personal-help" role="status"></p></section>`;
 }
+// Selection is transient UI state. Never store it with the customer's design.
+let activeTextSurface = null;
+function transformSelect(surface = null) {
+    if (surface && (!surface.isConnected || !surface.classList.contains('design-editable'))) return;
+    const previous = activeTextSurface;
+    if (previous && previous !== surface) {
+        previous.classList.remove('text-is-selected');
+        previous.querySelector('.design-text-object').setAttribute('aria-pressed', 'false');
+        previous.querySelectorAll('.transform-handle').forEach(handle => { handle.hidden = true; });
+        if (previous.contains(document.activeElement)) document.activeElement.blur();
+    }
+    activeTextSurface = surface;
+    if (surface) {
+        surface.classList.add('text-is-selected');
+        surface.querySelector('.design-text-object').setAttribute('aria-pressed', 'true');
+        surface.querySelectorAll('.transform-handle').forEach(handle => { handle.hidden = false; });
+    }
+    const controls = document.getElementById('transformControls');
+    if (controls) {
+        if (!surface && controls.contains(document.activeElement)) document.activeElement.blur();
+        controls.hidden = !surface;
+    }
+    const help = document.getElementById('selectionHelp');
+    if (help) help.textContent = surface ? 'Text ausgewählt: ziehen, skalieren oder drehen. Ausserhalb von Text und Werkzeugen tippen, um die Auswahl aufzuheben.' : 'Text anklicken oder antippen, um ihn zu bearbeiten. Ausserhalb tippen zeigt die Vorschau ohne Werkzeuge.';
+}
+function transformSelectionTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const tool = target.closest('.design-editable [data-transform-action]');
+    return tool?.closest('.design-editable') || null;
+}
+let selectionPointer = null;
+function selectionInside(target) {
+    return !!transformSelectionTarget(target) || !!(activeTextSurface && target.closest?.('.transform-controls'));
+}
+document.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || event.isPrimary === false) return;
+    const surface = transformSelectionTarget(event.target);
+    selectionPointer = { id: event.pointerId, inside: selectionInside(event.target) };
+    if (surface) transformSelect(surface);
+}, true);
+document.addEventListener('click', event => {
+    // Finish outside clicks only after their target is established. Collapsing the
+    // toolbar on pointerdown would move phone form buttons before they get clicked.
+    const inside = selectionPointer ? selectionPointer.inside : selectionInside(event.target);
+    selectionPointer = null;
+    if (!inside) transformSelect();
+}, true);
+document.addEventListener('pointerup', event => {
+    const pointer = selectionPointer;
+    if (pointer?.id !== event.pointerId) return;
+    setTimeout(() => {
+        if (selectionPointer !== pointer) return;
+        selectionPointer = null;
+        if (!pointer.inside) transformSelect();
+    }, 0);
+}, true);
+document.addEventListener('pointercancel', event => {
+    if (selectionPointer?.id === event.pointerId) selectionPointer = null;
+}, true);
+document.addEventListener('focusin', event => {
+    const surface = transformSelectionTarget(event.target);
+    if (surface) transformSelect(surface);
+    else if (!selectionPointer && !(activeTextSurface && event.target.closest?.('.transform-controls'))) transformSelect();
+});
 const mountedSurfaces = new Set();
 const surfaceObserver = new ResizeObserver(entries => {
     for (const entry of entries) transformFit(entry.target);
@@ -34,10 +98,12 @@ function transformFit(surface) {
     if (surface.classList.contains('design-editable')) transformSync();
 }
 function transformUnmount() {
+    transformSelect();
     for (const surface of mountedSurfaces) surfaceObserver.unobserve(surface);
     mountedSurfaces.clear();
 }
 function transformMount() {
+    if (activeTextSurface && !activeTextSurface.isConnected) transformSelect();
     for (const surface of mountedSurfaces) {
         if (!surface.isConnected) { surfaceObserver.unobserve(surface); mountedSurfaces.delete(surface); }
     }
@@ -114,6 +180,7 @@ function transformBind(surface) {
     surface.addEventListener('pointerdown', event => {
         const target = event.target.closest('[data-transform-action]');
         if (!target || event.button !== 0 || event.isPrimary === false || gesture || !personal.current) return;
+        transformSelect(surface);
         event.preventDefault();
         target.focus({ preventScroll: true });
         const start = point(event), transform = textTransform(personal.current.transform);
@@ -139,9 +206,14 @@ function transformBind(surface) {
     surface.addEventListener('pointercancel', event => { if (gesture?.id === event.pointerId) finish(true); });
     surface.addEventListener('lostpointercapture', () => finish(true));
     surface.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && gesture) { event.preventDefault(); finish(true); return; }
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            if (gesture) finish(true); else transformSelect();
+            return;
+        }
         const target = event.target.closest('[data-transform-action]');
         if (!target || !personal.current) return;
+        if (['Enter', ' '].includes(event.key) && target.dataset.transformAction === 'move') { event.preventDefault(); transformSelect(surface); return; }
         const t = textTransform(personal.current.transform), step = event.shiftKey ? 5 : 1;
         const action = target.dataset.transformAction;
         const direction = ['ArrowRight', 'ArrowUp'].includes(event.key) ? 1 : ['ArrowLeft', 'ArrowDown'].includes(event.key) ? -1 : 0;

@@ -41,7 +41,8 @@ with sync_playwright() as p:
     for i in range(1,9):send('touchMove',(start[0]+(end[0]-start[0])*i/8,start[1]+(end[1]-start[1])*i/8))
     send('touchCancel' if cancel else 'touchEnd')
    close(page.evaluate('scrollY'),scroll,1)
-  def reset():page.locator('#resetTransform').click();position_stage()
+  def reset():
+   page.locator('.design-text-object').focus();page.locator('#resetTransform').click();position_stage()
   def display_matches(selector,t):
    page.wait_for_function("""({selector,t}) => {const el=document.querySelector(selector);if(!el)return false;const s=el.getBoundingClientRect(),o=el.querySelector('.design-text-object').getBoundingClientRect();return Math.abs((o.x+o.width/2-s.x)/s.width-t.x)<.005 && Math.abs((o.y+o.height/2-s.y)/s.height-t.y)<.005}""",arg={'selector':selector,'t':t})
    measured=page.locator(selector).evaluate("el => {const s=el.getBoundingClientRect(),o=el.querySelector('.design-text-object').getBoundingClientRect();return {x:(o.x+o.width/2-s.x)/s.width,y:(o.y+o.height/2-s.y)/s.height}}")
@@ -103,7 +104,7 @@ with sync_playwright() as p:
   page.set_viewport_size({'width':width,'height':height});display_matches('#designSurface',target)
   page.locator('[data-view="map"]').click();page.locator('[data-duplicate]').click()
   assert page.evaluate('personal.drafts[1].transform')==target
-  page.locator('[data-edit]').nth(1).click();page.locator('#textRotation').fill('72')
+  page.locator('[data-edit]').nth(1).click();page.locator('.design-text-object').focus();page.locator('#textRotation').fill('72')
   assert page.evaluate('personal.drafts[0].transform.rotation')==target['rotation']
   page.locator('#saveDraft').click();assert page.evaluate('personal.drafts[1].transform.rotation')==72
   for box in page.locator('[data-compare]').all():box.check()
