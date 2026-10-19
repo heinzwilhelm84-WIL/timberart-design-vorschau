@@ -12,6 +12,11 @@ function mapRead() {
         const ids = new Set();
         for (const d of data.drafts) {
             if (!d || typeof d.id !== 'string' || ids.has(d.id) || typeof d.motifId !== 'string' || typeof d.text !== 'string' || !FONTS.some(f => fontId(f) === d.fontId) || typeof d.createdAt !== 'string' || typeof d.updatedAt !== 'string') throw Error();
+            if (d.layoutVersion != null && ![1, 2].includes(d.layoutVersion)) throw Error();
+            if (d.layoutVersion === 2) {
+                if (!d.transform || !['x', 'y', 'scale', 'rotation'].every(key => typeof d.transform[key] === 'number' && Number.isFinite(d.transform[key]))) throw Error();
+                d.transform = textTransform(d.transform);
+            }
             ids.add(d.id);
         }
         personal.drafts = data.drafts;
@@ -50,7 +55,7 @@ function personalLeave(view) {
 }
 function personalStart(motifId, seed) {
     if (personal.current && !personal.picking && personal.dirty && !confirm('Aktuellen ungespeicherten Entwurf verwerfen?')) return;
-    const current = personal.picking && personal.current ? personal.current : { id: null, text: seed?.text || '', fontId: seed?.fontId || fontId(FONTS[0]) };
+    const current = personal.picking && personal.current ? personal.current : { id: null, text: seed?.text || '', fontId: seed?.fontId || fontId(FONTS[0]), layoutVersion: 2, transform: textTransform() };
     personal.current = { ...current, motifId: motifId || '' };
     personal.picking = false;
     personal.dirty = true;
@@ -66,34 +71,42 @@ function personalPick() {
     studioNavigate('motifs');
     personalNotice('Wähle ein Motiv, öffne es und tippe auf „Personalisieren“. Dein Text und deine Schrift bleiben erhalten.');
 }
-function personalPreview(d, full = false) {
+function personalPreview(d, full = false, editable = false) {
+    if (d.layoutVersion === 2) return transformPreview(d, full, editable);
     const motif = studio.catalog.find(m => m.id === d.motifId);
     const font = personalFont(d.fontId);
     return `<div class="composition ${full ? 'composition-large' : ''}">${motif ? `<img src="${studioEscape(motif.url)}" alt="${studioEscape(studioPrettyName(motif.name))}" loading="lazy"><span class="asset-warning" hidden>Motivbild nicht erreichbar. Die Auswahl bleibt gespeichert.</span>` : '<p class="asset-warning">Bitte ein Motiv auswählen.</p>'}<div class="composition-text" tabindex="0" role="region" aria-label="Wunschtextvorschau, bei langen Texten scrollbar" style="font-family:${studioEscape(font.family)}">${studioEscape(d.text || 'Dein Wunschtext')}</div></div>`;
 }
 function personalImages() {
+    transformMount();
     document.querySelectorAll('.composition img').forEach(img => img.addEventListener('error', () => { img.hidden = true; img.nextElementSibling.hidden = false; }, { once: true }));
 }
 function personalEditor() {
-    if (!personal.current) { personal.current = { id: null, motifId: '', text: '', fontId: fontId(FONTS[0]) }; }
+    if (!personal.current) { personal.current = { id: null, motifId: '', text: '', fontId: fontId(FONTS[0]), layoutVersion: 2, transform: textTransform() }; }
+    const upgraded = personal.current.layoutVersion !== 2;
+    personal.current.layoutVersion = 2;
+    personal.current.transform = textTransform(personal.current.transform);
+    if (upgraded) personal.dirty = true;
     personal.picking = false;
     studioNavigation();
     const d = personal.current;
     const motif = studio.catalog.find(m => m.id === d.motifId);
-    document.getElementById('content').innerHTML = `<section class="page-wrap personal-page"><div class="eyebrow">Dein persönlicher Entwurf</div><h1>Mach es zu deinem Geschenk.</h1><ol class="personal-steps"><li>1 · Motiv wählen</li><li>2 · Text & Schrift</li><li>3 · In der Mappe speichern</li></ol><div class="personal-layout"><div><div id="compositionPreview">${personalPreview(d, true)}</div><p class="personal-caption">Gestaltungsvorschau · keine massstabsgetreue Gravurvorlage</p><p id="fontStatus" role="status"></p></div><div class="personal-controls"><h2>Deine Gestaltung</h2><p>${motif ? studioEscape(studioPrettyName(motif.name)) + ' · ' + studioEscape(studioLabel(motif.category)) : 'Noch kein Motiv ausgewählt'}</p><button class="action" id="chooseMotif">${motif ? 'Motiv wechseln' : 'Motiv auswählen'}</button><label for="wishText">Dein Wunschtext</label><textarea id="wishText" rows="4" aria-describedby="textAdvice" placeholder="Zum Beispiel: Für dich, von Herzen"></textarea><p id="textAdvice" class="personal-help" role="status"></p><h3>Deine Schrift</h3><div id="fontChoices" class="font-choices" role="group" aria-label="Schrift auswählen">${FONTS.map(f => `<button class="font-choice" data-personal-font="${fontId(f)}" aria-pressed="${fontId(f) === d.fontId}"><strong>${studioEscape(f.name)}</strong><span style="font-family:${studioEscape(f.family)}"></span></button>`).join('')}</div><button class="action primary" id="saveDraft">${d.id ? 'Änderungen speichern' : 'In Designmappe speichern'}</button><button class="action" id="cancelDraft">Abbrechen</button><p id="editorError" role="alert"></p></div></div></section>`;
+    document.getElementById('content').innerHTML = `<section class="page-wrap personal-page"><div class="eyebrow">Dein persönlicher Entwurf</div><h1>Mach es zu deinem Geschenk.</h1><ol class="personal-steps"><li>1 · Motiv wählen</li><li>2 · Text & Schrift</li><li>3 · In der Mappe speichern</li></ol><div class="personal-layout"><div><div id="compositionPreview">${personalPreview(d, true, true)}</div>${transformControls()}<p class="personal-caption">Gestaltungsvorschau · keine massstabsgetreue Gravurvorlage</p><p id="fontStatus" role="status"></p></div><div class="personal-controls"><h2>Deine Gestaltung</h2><p>${motif ? studioEscape(studioPrettyName(motif.name)) + ' · ' + studioEscape(studioLabel(motif.category)) : 'Noch kein Motiv ausgewählt'}</p><button class="action" id="chooseMotif">${motif ? 'Motiv wechseln' : 'Motiv auswählen'}</button><label for="wishText">Dein Wunschtext</label><textarea id="wishText" rows="4" aria-describedby="textAdvice" placeholder="Zum Beispiel: Für dich, von Herzen"></textarea><p id="textAdvice" class="personal-help" role="status"></p><h3>Deine Schrift</h3><div id="fontChoices" class="font-choices" role="group" aria-label="Schrift auswählen">${FONTS.map(f => `<button class="font-choice" data-personal-font="${fontId(f)}" aria-pressed="${fontId(f) === d.fontId}"><strong>${studioEscape(f.name)}</strong><span style="font-family:${studioEscape(f.family)}"></span></button>`).join('')}</div><button class="action primary" id="saveDraft">${d.id ? 'Änderungen speichern' : 'In Designmappe speichern'}</button><button class="action" id="cancelDraft">Abbrechen</button><p id="editorError" role="alert"></p></div></div></section>`;
     document.getElementById('wishText').value = d.text;
     document.getElementById('wishText').addEventListener('input', e => { d.text = e.target.value; personal.dirty = true; personalUpdate(); });
     document.getElementById('chooseMotif').onclick = personalPick;
     document.getElementById('saveDraft').onclick = personalSave;
     document.getElementById('cancelDraft').onclick = () => studioNavigate('map');
     document.querySelectorAll('[data-personal-font]').forEach(btn => btn.onclick = () => { d.fontId = btn.dataset.personalFont; personal.dirty = true; personalUpdate(); });
+    transformBindControls();
     personalUpdate();
+    if (upgraded) personalNotice('Dieser ältere Entwurf ist jetzt für die frei gestaltbare Fläche vorbereitet. Erst mit „Änderungen speichern“ wird die neue Anordnung übernommen.');
 }
 let fontRequest = 0;
 function personalUpdate() {
     const d = personal.current;
     const font = personalFont(d.fontId);
-    document.getElementById('compositionPreview').innerHTML = personalPreview(d, true);
+    document.getElementById('compositionPreview').innerHTML = personalPreview(d, true, true);
     personalImages();
     const count = Array.from(d.text).length;
     document.getElementById('textAdvice').textContent = `${count} Zeichen · ${count > 80 || d.text.split('\n').length > 2 ? 'Bei längeren Texten oder vielen Zeilen kann die Schrift auf dem fertigen Produkt zu klein werden. Prüfe die Lesbarkeit gemeinsam mit uns. Dein Text wird vollständig gespeichert.' : 'Zeilenumbrüche sind möglich. Bitte prüfe Schreibweise und Lesbarkeit.'}`;
@@ -109,7 +122,7 @@ function personalUpdate() {
     }, 4000);
     document.fonts.load(`400 24px "${font.name}"`).then(loaded => {
         clearTimeout(timer);
-        if (request === fontRequest && status.isConnected) status.textContent = loaded.length ? '' : 'Originalschrift gerade nicht verfügbar. Eine Ersatzschrift wird angezeigt.';
+        if (request === fontRequest && status.isConnected) { status.textContent = loaded.length ? '' : 'Originalschrift gerade nicht verfügbar. Eine Ersatzschrift wird angezeigt.'; transformSync(); }
     }).catch(() => { clearTimeout(timer); if (request === fontRequest && status.isConnected) status.textContent = 'Originalschrift nicht geladen. Eine Ersatzschrift wird angezeigt.'; });
 }
 function personalSave() {
@@ -120,7 +133,7 @@ function personalSave() {
     const motif = studio.catalog.find(m => m.id === d.motifId);
     const now = new Date().toISOString();
     const existing = personal.drafts.find(item => item.id === d.id);
-    const saved = { id: d.id || crypto.randomUUID(), motifId: d.motifId, motifName: motif.name, category: motif.category, text: d.text, fontId: d.fontId, layoutVersion: 1, createdAt: existing?.createdAt || now, updatedAt: now };
+    const saved = { id: d.id || crypto.randomUUID(), motifId: d.motifId, motifName: motif.name, category: motif.category, text: d.text, fontId: d.fontId, layoutVersion: 2, transform: textTransform(d.transform), createdAt: existing?.createdAt || now, updatedAt: now };
     const list = existing ? personal.drafts.map(item => item.id === d.id ? saved : item) : [...personal.drafts, saved];
     if (!mapWrite(list)) { error.textContent = document.getElementById('personalStatus').textContent; return; }
     personal.current = null; personal.dirty = false; personal.picking = false;
@@ -129,14 +142,14 @@ function personalSave() {
 function mapEdit(id) {
     const d = personal.drafts.find(item => item.id === id);
     if (!d) return;
-    personal.current = { ...d }; personal.dirty = false; personal.picking = false;
+    personal.current = { ...d, ...(d.transform ? { transform: { ...d.transform } } : {}) }; personal.dirty = false; personal.picking = false;
     studioNavigate('editor');
 }
 function mapDuplicate(id) {
     const d = personal.drafts.find(item => item.id === id);
     if (!d) return;
     const now = new Date().toISOString();
-    if (mapWrite([...personal.drafts, { ...d, id: crypto.randomUUID(), createdAt: now, updatedAt: now }])) { mapRender(); studioNavigation(); personalNotice('Entwurf dupliziert. Über „Bearbeiten“ kannst du die Variante anpassen.'); }
+    if (mapWrite([...personal.drafts, { ...d, ...(d.transform ? { transform: { ...d.transform } } : {}), id: crypto.randomUUID(), createdAt: now, updatedAt: now }])) { mapRender(); studioNavigation(); personalNotice('Entwurf dupliziert. Über „Bearbeiten“ kannst du die Variante anpassen.'); }
 }
 function mapDelete(id) {
     if (!confirm('Diesen Entwurf aus der Designmappe löschen?')) return;
