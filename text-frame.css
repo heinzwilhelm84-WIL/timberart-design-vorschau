@@ -5,7 +5,7 @@
 .frame-text-content::after { content:'\200b'; }
 .frame-v3 .design-editable .frame-v3-object { outline:0; }
 .frame-v3 .design-editable.text-is-selected .frame-v3-object { outline:2px dashed var(--purple); outline-offset:0; }
-.frame-v3 .design-editable.text-is-selected .frame-v3-object:focus-visible { outline:4px solid var(--purple); }
+.frame-v3 .design-editable.text-is-selected .frame-v3-object:focus-visible { outline:4px dashed var(--purple); }
 .frame-warning { text-align:left; color:#792f15; background:#fff0d1; padding:12px; margin-top:12px; font-size:13px; line-height:1.5; }
 .frame-warning[hidden] { display:none; }
 .frame-controls { border:1px solid #b8adc9; border-radius:12px; padding:16px; margin:18px 0; min-width:0; }
@@ -19,5 +19,7 @@
 .frame-guide-lines { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:hidden; }
 .frame-guide-lines line { stroke:var(--purple); stroke-width:1; stroke-dasharray:3 3; vector-effect:non-scaling-stroke; }
 .design-surface:not(.text-is-selected) .frame-guide-lines { display:none; }
-.frame-v3 .resize-handle { background:#fff; color:var(--purple); border:2px solid var(--purple); font-size:22px; }
-.frame-v3 .resize-handle span { display:block; pointer-events:none; }
+/* Keep the 48px pointer target; only its small centre circle is painted. */
+.frame-v3 .resize-handle { background:transparent; border:0; padding:0; box-shadow:none; }
+.frame-v3 .resize-handle::before { content:""; width:16px; height:16px; box-sizing:border-box; background:#fff; border:2px solid var(--purple); border-radius:50%; pointer-events:none; }
+.frame-v3 .resize-handle:focus-visible::before { outline:2px solid var(--purple); outline-offset:3px; }

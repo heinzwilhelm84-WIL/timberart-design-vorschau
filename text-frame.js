@@ -17,7 +17,7 @@ function frameBounds(f) {
     const halfY = Math.abs(Math.sin(a)) * f.width / 2 + Math.abs(Math.cos(a)) * f.height / 2;
     return { left: f.x - halfX, right: f.x + halfX, top: f.y - halfY, bottom: f.y + halfY };
 }
-const FRAME_HANDLES = Object.freeze({ nw:[-1,-1], n:[0,-1], ne:[1,-1], e:[1,0], se:[1,1], s:[0,1], sw:[-1,1], w:[-1,0] });
+const FRAME_HANDLES = Object.freeze({ nw:[-1,-1], ne:[1,-1], se:[1,1], sw:[-1,1] });
 function frameResize(f, handle, dx, dy) {
     const [sx,sy] = FRAME_HANDLES[handle] || [];
     if (sx === undefined || !Number.isFinite(dx) || !Number.isFinite(dy)) throw Error('Invalid resize');
@@ -36,9 +36,9 @@ function frameResize(f, handle, dx, dy) {
     return copyTextFrame({...f,x:Math.max(36,Math.min(564,f.x+cx*t)),y:Math.max(36,Math.min(564,f.y+cy*t)),width:f.width+dw*t,height:f.height+dh*t});
 }
 function frameTools() {
-    const names={nw:'oben links',n:'oben',ne:'oben rechts',e:'rechts',se:'unten rechts',s:'unten',sw:'unten links',w:'links'};
+    const names={nw:'oben links',ne:'oben rechts',se:'unten rechts',sw:'unten links'};
     return `<svg class="frame-guide-lines" viewBox="0 0 600 600" aria-hidden="true">${[...Object.keys(FRAME_HANDLES),'rotate'].map(key=>`<line data-frame-guide="${key}"/>`).join('')}</svg>` +
-        Object.keys(FRAME_HANDLES).map(key=>`<button type="button" class="transform-handle resize-handle" hidden data-transform-action="resize" data-frame-handle="${key}" aria-label="Rahmen ${names[key]} ändern. Ziehen oder Pfeiltasten verwenden." title="Rahmen ${names[key]} ändern"><span>↔</span></button>`).join('') +
+        Object.keys(FRAME_HANDLES).map(key=>`<button type="button" class="transform-handle resize-handle" hidden data-transform-action="resize" data-frame-handle="${key}" aria-label="Rahmen ${names[key]} ändern. Ziehen oder Pfeiltasten verwenden." title="Rahmen ${names[key]} ändern"></button>`).join('') +
         '<button type="button" class="transform-handle rotate-handle" hidden data-transform-action="rotate" aria-label="Text drehen. Ziehen oder Pfeiltasten verwenden.">↻</button>';
 }
 function framePlaceTools(surface,f) {
@@ -69,7 +69,6 @@ function framePlaceTools(surface,f) {
         Object.assign(button.style,{left:`${p.x/6}%`,top:`${p.y/6}%`});
         if(d.key!=='rotate') {
             const angle=Math.atan2(d.sy,d.sx)*180/Math.PI+f.rotation;
-            button.querySelector('span').style.transform=`rotate(${angle}deg)`;
             button.style.cursor=['ew-resize','nwse-resize','ns-resize','nesw-resize'][((Math.round(angle/45)%4)+4)%4];
         }
         const line=surface.querySelector(`[data-frame-guide="${d.key}"]`);
@@ -82,7 +81,7 @@ function framePreview(d, full, editable) {
 }
 function frameControls() {
     const fields = [['width','Rahmenbreite'],['height','Rahmenhöhe'],['fontSize','Schriftgrösse'],['x','Position horizontal'],['y','Position vertikal'],['rotation','Drehung (Grad)']];
-    return `<fieldset class="frame-controls"><legend>Textrahmen</legend><p>Breite, Höhe und Schriftgrösse sind unabhängig. Werte beziehen sich auf die 600 × 600 grosse Vorschau, nicht auf Millimeter. Text auswählen, dann verschieben oder über die acht Eck-/Seitengriffe den Rahmen ändern. ↻ dreht den Text. Bei kleinen Rahmen liegen die Griffe mit Verbindungslinien weiter aussen. Auch die Eingabefelder bleiben verfügbar.</p><div class="frame-fields">${fields.map(([key,label]) => `<label for="frame-${key}">${label}<input id="frame-${key}" data-frame-field="${key}" type="number" min="${FRAME_LIMITS[key][0]}" max="${FRAME_LIMITS[key][1]}" step="0.1" inputmode="decimal"></label>`).join('')}</div><label for="frame-align">Textausrichtung<select id="frame-align"><option value="left">Linksbündig</option><option value="center">Zentriert</option><option value="right">Rechtsbündig</option></select></label><p class="frame-control-error" role="status"></p></fieldset>`;
+    return `<fieldset class="frame-controls"><legend>Textrahmen</legend><p>Breite, Höhe und Schriftgrösse sind unabhängig. Werte beziehen sich auf die 600 × 600 grosse Vorschau, nicht auf Millimeter. Text auswählen, dann verschieben oder über die vier Eckgriffe den Rahmen ändern. ↻ dreht den Text. Bei kleinen Rahmen liegen die Griffe mit Verbindungslinien weiter aussen. Auch die Eingabefelder bleiben verfügbar.</p><div class="frame-fields">${fields.map(([key,label]) => `<label for="frame-${key}">${label}<input id="frame-${key}" data-frame-field="${key}" type="number" min="${FRAME_LIMITS[key][0]}" max="${FRAME_LIMITS[key][1]}" step="0.1" inputmode="decimal"></label>`).join('')}</div><label for="frame-align">Textausrichtung<select id="frame-align"><option value="left">Linksbündig</option><option value="center">Zentriert</option><option value="right">Rechtsbündig</option></select></label><p class="frame-control-error" role="status"></p></fieldset>`;
 }
 function frameSet(changes) {
     if (personal.current?.layoutVersion !== 3 || studio.view !== 'editor') return false;

@@ -34,7 +34,8 @@ test('rotation bounds retain size and detect out-of-surface corners',()=>{
 
 function anchor(f,sx,sy) {const a=f.rotation*Math.PI/180;return {x:f.x-Math.cos(a)*sx*f.width/2+Math.sin(a)*sy*f.height/2,y:f.y-Math.sin(a)*sx*f.width/2-Math.cos(a)*sy*f.height/2};}
 function near(a,b) {assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);}
-test('all eight handles retain opposite anchor at all rotations; no font scaling',()=>{
+test('all four corner handles retain opposite anchor at all rotations; no font scaling',()=>{
+ assert.deepEqual(Object.keys(model.FRAME_HANDLES),['nw','ne','se','sw']);
  for(const rotation of [0,31,90,-47,179]) for(const [handle,[sx,sy]] of Object.entries(model.FRAME_HANDLES)) {
   const f={...model.copyTextFrame(),x:300,y:300,width:240,height:160,rotation,align:'right'},before=anchor(f,sx,sy);
   const r=model.frameResize(f,handle,23,-17),after=anchor(r,sx,sy);
@@ -46,8 +47,8 @@ test('all eight handles retain opposite anchor at all rotations; no font scaling
 });
 test('rotated frame uses local width/height axes',()=>{
  const f={...model.copyTextFrame(),x:300,y:300,rotation:90};
- const w=model.frameResize(f,'e',0,50);near(w.width,f.width+50);near(w.height,f.height);near(w.x,f.x);near(w.y,f.y+25);
- const h=model.frameResize(f,'s',-40,0);near(h.height,f.height+40);near(h.width,f.width);near(h.x,f.x-20);
+ const w=model.frameResize(f,'se',0,50);near(w.width,f.width+50);near(w.height,f.height);near(w.x,f.x);near(w.y,f.y+25);
+ const h=model.frameResize(f,'se',-40,0);near(h.height,f.height+40);near(h.width,f.width);near(h.x,f.x-20);
 });
 test('all resize limits preserve validity and opposite anchors',()=>{
  for(const rotation of [0,31,90,-47]) for(const [handle,[sx,sy]] of Object.entries(model.FRAME_HANDLES)) for(const x of [36,300,564]) for(const y of [36,300,564]) for(const delta of [-10000,10000]) {
@@ -66,5 +67,5 @@ test('resize roundtrip retains every frame property, not another scale',()=>{
  assert.deepEqual(plain(model.copyTextFrame(JSON.parse(JSON.stringify(f)))),plain(f));assert.equal('scale' in f,false);
 });
 test('invalid resize handles and nonfinite deltas are rejected',()=>{
- const f=model.copyTextFrame();for(const args of [['bad',1,1],['e',NaN,1],['e',1,Infinity]]) assert.throws(()=>model.frameResize(f,...args));
+ const f=model.copyTextFrame();for(const args of [['bad',1,1],...['n','e','s','w'].map(k=>[k,1,1]),['se',NaN,1],['se',1,Infinity]]) assert.throws(()=>model.frameResize(f,...args));
 });
