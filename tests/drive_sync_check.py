@@ -1,5 +1,5 @@
 """Offline synchronization contract tests; all Google operations are simulated."""
-import copy,hashlib,importlib.util,io,json,pathlib,socket,subprocess,sys,tempfile,unittest
+import contextlib,copy,hashlib,importlib.util,io,json,pathlib,socket,subprocess,sys,tempfile,unittest
 from unittest.mock import patch
 from PIL import Image,PngImagePlugin
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -116,6 +116,111 @@ class SyncChecks(unittest.TestCase):
   self.api.tree['a'][0]['name']='Neuer Name.png'
   report=self.run_sync();self.assertEqual(self.api.downloads,[]);self.assertEqual(set(self.root.rglob('*.webp')),before)
   self.assertEqual(report['metadataOnlyImages'],['old']);self.assertEqual(images.read_json(self.root/'catalog.json')[0]['name'],'Neuer Name')
+ def test_metadata_fingerprint_updates_for_rename_time_and_version_without_download(self):
+  self.run_sync();before={p:p.read_bytes() for p in self.root.rglob('*.webp')}
+  for change in [{'name':'Umbenannt.png'},{'modifiedTime':'2026-10-20T10:00:00Z'},{'version':'2'}]:
+   with self.subTest(change=change):
+    self.api.tree['a'][0].update(change);self.api.downloads=[]
+    report=self.run_sync();entry=images.read_json(self.root/'data/motifs-manifest.json')['motifs'][0]
+    self.assertEqual(entry['sourceFingerprint'],images.source_fingerprint(entry['source']))
+    self.assertEqual(entry['source']['originalFilename'],'Umbenannt.png')
+    self.assertEqual(self.api.downloads,[]);self.assertEqual(report['metadataOnlyImages'],['old'])
+    self.assertEqual(before,{p:p.read_bytes() for p in self.root.rglob('*.webp')})
+    self.assertEqual(self.run_sync()['changedFiles'],[])
+ def conflicting_first_binding(self):
+  self.api.tree['root'].append(folder('other','Andere Kategorie'))
+  self.api.tree['other']=self.api.tree['a'];self.api.tree['a']=[]
+ def test_first_binding_name_evidence_conflict_aborts_inventory_and_apply(self):
+  self.conflicting_first_binding();before=snapshot(self.root)
+  for apply in [False,True]:
+   with self.subTest(apply=apply),self.assertRaisesRegex(sync.MappingError,'privat pruefen'):
+    sync.synchronize(self.root,self.api,apply)
+   self.assertEqual(snapshot(self.root),before);self.assertEqual(self.api.downloads,[])
+ def test_first_binding_renamed_folder_uses_unambiguous_motif_evidence(self):
+  self.api.tree['root'][0]['name']='Umbenannt'
+  self.run_sync();category=images.read_json(self.root/'data/categories.json')['categories'][0]
+  self.assertEqual((category['id'],category['key'],category['folderId']),('legacy-fixed','Bestehend','a'))
+  self.assertEqual(category['name'],'Umbenannt')
+ def test_bound_legacy_folder_survives_rename_and_move_without_rebinding(self):
+  self.run_sync();old=self.api.tree['root'].pop(0);old['name']='Verschoben und umbenannt'
+  self.api.tree['root'].append(folder('parent','Neue Gruppe'));self.api.tree['parent']=[old]
+  self.api.downloads=[];self.run_sync()
+  category=next(c for c in images.read_json(self.root/'data/categories.json')['categories'] if c['id']=='legacy-fixed')
+  self.assertEqual((category['key'],category['folderId'],category['parentId']),('Bestehend','a','drive-parent'))
+  self.assertEqual(images.read_json(self.root/'catalog.json')[0]['id'],'old');self.assertEqual(self.api.downloads,[])
+ def test_first_binding_moved_or_renamed_subtree_requires_review_not_parent_binding(self):
+  for name in ['Bestehend','Auch umbenannt']:
+   with self.subTest(name=name):
+    old=self.api.tree['root'][0] if self.api.tree['root'][0]['id']=='a' else self.api.tree['parent'][0]
+    old['name']=name
+    self.api.tree['root']=[folder('parent','Neue Gruppe'),folder('logos','LOGO'),folder('fonts','Schriften')]
+    self.api.tree['parent']=[old];before=snapshot(self.root)
+    with self.assertRaises(sync.MappingError):sync.synchronize(self.root,self.api)
+    self.assertEqual(before,snapshot(self.root))
+    report=sync.synchronize(self.root,self.api,bindings={'legacy-fixed':'a'})
+    legacy=next(c for c in report['categoryBindings'] if c['id']=='legacy-fixed')
+    self.assertEqual((legacy['key'],legacy['folderId'],legacy['parentId']),('Bestehend','a','drive-parent'))
+ def test_reviewed_private_first_binding_resolves_conflict_without_changing_identity(self):
+  self.conflicting_first_binding()
+  sync.synchronize(self.root,self.api,True,bindings={'legacy-fixed':'a'})
+  categories=images.read_json(self.root/'data/categories.json')['categories']
+  category=next(c for c in categories if c['id']=='legacy-fixed')
+  self.assertEqual((category['key'],category['folderId']),('Bestehend','a'))
+  self.assertEqual(images.read_json(self.root/'catalog.json')[0]['id'],'old')
+  with self.assertRaises(sync.MappingError):sync.synchronize(self.root,self.api,bindings={'legacy-fixed':'other'})
+ def test_private_bindings_reject_unknown_missing_and_duplicate_targets(self):
+  for bindings in [{'unknown':'a'},{'legacy-fixed':'missing'}]:
+   with self.subTest(bindings=bindings),self.assertRaises(sync.MappingError):sync.synchronize(self.root,self.api,bindings=bindings)
+  categories=images.read_json(self.root/'data/categories.json');categories['categories'].append({'id':'legacy-two','key':'Zwei','name':'Zwei','folderId':None})
+  write(self.root,'data/categories.json',categories)
+  with self.assertRaises(sync.MappingError):sync.synchronize(self.root,self.api,bindings={'legacy-fixed':'a','legacy-two':'a'})
+ def test_private_bindings_file_is_local_only_outside_repository(self):
+  path=self.root.parent/'private-bindings.json';path.write_text(json.dumps({'version':1,'bindings':{'legacy-fixed':'a'}}))
+  with patch.dict('os.environ',{'GITHUB_ACTIONS':'false'}):
+   self.assertEqual(sync.load_category_bindings(path,self.root),{'legacy-fixed':'a'})
+   with self.assertRaises(sync.SyncError):sync.load_category_bindings(self.root/'mapping.json',self.root)
+  with patch.dict('os.environ',{'GITHUB_ACTIONS':'true'}),self.assertRaises(sync.SyncError):sync.load_category_bindings(path,self.root)
+  path.write_text(json.dumps({'version':1,'bindings':{},'private-name':'NOT PUBLIC'}))
+  with self.assertRaises(sync.MappingError):sync.load_category_bindings(path,self.root)
+ def test_public_reports_only_include_fixed_status_and_counts_in_both_modes(self):
+  sentinel='PRIVATE-SOURCE-METADATA'
+  report={'rootFolders':[{'id':sentinel,'name':sentinel,'excluded':True}], 'categoryBindings':[{'name':sentinel,'folderId':sentinel}],
+          'newImages':[sentinel], 'newCategories':[sentinel], 'changedFiles':[sentinel], 'skippedMimeTypes':{sentinel:4},
+          'plannedDownloads':2,'plannedOriginalBytes':123456789,'unexpected':sentinel}
+  path=self.root.parent/'report.md'
+  for mode in ['inventory','prepare-pr']:
+   report['mode']=mode;sync.write_report(report,path);text=path.read_text()
+   self.assertNotIn(sentinel,text);self.assertNotIn('123456789',text)
+   self.assertIn('- newImages: 1',text);self.assertIn('- plannedDownloads: 2',text)
+   self.assertIn('- Status: abgeschlossen',text)
+ def test_public_report_rejects_dynamic_strings_in_count_or_mode(self):
+  path=self.root.parent/'report.md'
+  for report in [{'mode':'PRIVATE-MODE'},{'mode':'inventory','plannedDownloads':'PRIVATE-COUNT'}]:
+   with self.assertRaises(sync.SyncError):sync.write_report(report,path)
+   self.assertFalse(path.exists())
+ def test_cli_success_and_failures_never_emit_source_metadata(self):
+  sentinel='PRIVATE-SOURCE-METADATA'
+  self.api.tree['a'][0]['name']=sentinel+'.png'
+  path=self.root.parent/'report.md'
+  for apply in [False,True]:
+   args=['drive_sync.py','--repo',str(self.root),'--report',str(path)]+(['--apply'] if apply else [])
+   out,err=io.StringIO(),io.StringIO()
+   with patch.object(sys,'argv',args),patch.object(sync,'DriveAPI',return_value=self.api),contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):
+    self.assertEqual(sync.main(),0)
+   public=out.getvalue()+err.getvalue()+path.read_text()
+   self.assertNotIn(sentinel,public);self.assertNotIn('Alt.png',public)
+  # Even a SyncError containing source names, IDs or raw responses must be hidden.
+  for failure in [sync.SyncError(sentinel),ValueError(sentinel),sync.MappingError()]:
+   out,err=io.StringIO(),io.StringIO()
+   with patch.object(sys,'argv',args),patch.object(sync,'DriveAPI',side_effect=failure),contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):
+    self.assertEqual(sync.main(),1)
+   self.assertNotIn(sentinel,out.getvalue()+err.getvalue())
+   if isinstance(failure,sync.MappingError):self.assertIn('--category-bindings',err.getvalue())
+ def test_image_failure_diagnostic_does_not_include_motif_id_or_raw_error(self):
+  self.api.tree['a'][0]['id']='PRIVATE-MOTIF-ID'
+  self.api.payloads['PRIVATE-MOTIF-ID']=b'bad image'
+  with self.assertRaises(sync.SyncError) as error:self.run_sync()
+  self.assertNotIn('PRIVATE-MOTIF-ID',str(error.exception))
  def test_late_corrupt_image_and_post_write_failure_leave_repository_unchanged(self):
   before=snapshot(self.root);self.api.tree['a'].append(image('broken','Broken.png',b'bad'));self.api.payloads['broken']=b'bad'
   with self.assertRaises(sync.SyncError):self.run_sync()

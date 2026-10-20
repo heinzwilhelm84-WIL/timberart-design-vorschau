@@ -1,5 +1,71 @@
 # Offline-Prüfergebnis – Drive-Synchronisierung
 
+## Lokale Korrekturen und erneute Prüfung vom 20.10.2026
+
+Uncommittete Änderungen auf `feature/drive-sync-automatik`, HEAD weiterhin
+`2e30f0ef7abee09a0c8a12afbfc7d432487844af`. Kein Push, Live-Abgleich, Workflow-Start,
+Merge, Deployment oder aktivierter Zeitplan. Der ältere Bericht unten ist ein
+historischer Stand; seine damalige detaillierte Berichtsausgabe wurde ersetzt.
+
+Die zwei zuvor unabhängig reproduzierten Fehler sind durch Regressionstests
+abgedeckt und behoben:
+
+- `sourceFingerprint` wird vor der Wiederverwendungsentscheidung aus den aktuellen
+  Quelldaten berechnet. Umbenennung, neue Änderungszeit und neue Version bei
+  identischem Bildinhalt: konsistenter Fingerprint, null erneute Downloads,
+  unveränderte WebP-Bytes; der Folgelauf ändert keine Dateien.
+- Widerspruch zwischen namensgleichem Ordner und Motivfund in anderem Ordner:
+  Inventur und Übernahme brechen ohne Ausgabenänderung mit einer verständlichen,
+  metadatenfreien Meldung ab. Umbenennungen, verschobene Unterbäume und bereits
+  gebundene Kategorien werden geprüft. Eine private, lokale Erstzuordnungsdatei
+  ausserhalb des Repositorys kann den Konflikt bewusst auflösen; sie ist in
+  öffentlichen Actions gesperrt und kann keine gespeicherte Bindung umbiegen.
+- Inventur- und PR-Bericht geben nur feste Statusmeldungen und Gesamtzahlen aus.
+  Eingespeiste Namen, IDs, Pfade und unbekannte Metadaten erscheinen weder im
+  Bericht noch in CLI-Erfolgs-/Fehlerausgaben. Auch rohe SyncError-/Decodertexte
+  und eine betroffene Motiv-ID werden nicht öffentlich ausgegeben.
+
+Tatsächlich erneut ausgeführte Befehle (alle Exitcode 0):
+
+```sh
+python3 -B tests/drive_sync_check.py
+python3 -B -m unittest discover -s tests -p 'import_check.py' -v
+python3 -B tests/drive_connection_check.py
+python3 -B tools/sync_motifs.py --validate
+env -u TIMBERART_TEST_SCREENSHOTS python3 -B tests/sync_categories_browser_check.py
+env -u TIMBERART_TEST_SCREENSHOTS python3 -B tests/browser_check.py
+env -u TIMBERART_TEST_SCREENSHOTS python3 -B tests/transform_check.py
+env -u TIMBERART_TEST_SCREENSHOTS python3 -B tests/selection_check.py
+env -u TIMBERART_TEST_SCREENSHOTS python3 -B tests/order_safety_check.py
+env -u TIMBERART_TEST_SCREENSHOTS python3 -B tests/local_images_check.py
+```
+
+35 Sync-Tests (die bisherigen 23 plus zwölf neue), acht Importtests und sechs
+Verbindungstests bestanden: **49 Python-Tests insgesamt**, null fehlgeschlagene
+Tests. Alle sechs Browser-Skripte bestanden. Chromium: Desktop 1440 px mit Maus,
+Tablet 820 px und Smartphone 390 px mit emuliertem Touch. Externe HTTPS-Aufrufe
+in Browserprüfungen blockiert; echte Netzwerkverbindungen in Sync-Tests gesperrt.
+Beide gefüllten Bestellformulare: wiederholtes Absenden ohne Requests/fetch/XHR/
+Beacon, native Übermittlung durch CSP blockiert, auch ohne App-JavaScript.
+
+Der lokale Validator bestätigt 412 IDs, 824 WebPs und 173.988.974 Bytes.
+Zusätzliche lesende Git-/Python-Prüfung: Katalog, Herkunftsmanifest und WebPs
+gegenüber `origin/main` (`d9b8bf6`) unverändert; alle neun Kategorie-Schlüssel
+erhalten und Kategorie-Datei samt IDs gegenüber HEAD unverändert. Oberfläche,
+Schriftdefinitionen, CSP und beide Workflows wurden durch die Korrektur nicht
+verändert. Alle 824 Dateien im Browser mit HTTP 200, WebP-MIME und erfolgreicher
+Decodierung unter Pages-Unterpfad geladen. Bestehende Entwürfe und Favoriten
+unverändert wiederhergestellt. Python-Syntax und bekannte Geheimnismuster in
+geänderten Dateien geprüft; `git diff --check` ohne Befund.
+
+Grenzen: kein echter Google-/GitHub-Integrationstest, keine physischen Geräte,
+kein Vergleich mit Drive-Originalen (`sourcePixelComparisons: 0`). Die echte
+Ordnerzuordnung bleibt privat zu prüfen. Öffentliche PR-Dateidiffs enthalten
+weiterhin App-Daten und Herkunftszuordnungen; der anonyme Bericht versteckt diese
+nicht. Sicherer Prüfweg und Grenzen stehen in [drive-sync.md](drive-sync.md).
+
+## Historischer Prüfstand vor diesen Korrekturen
+
 19.10.2026, Branch `feature/drive-sync-automatik`, Basis `d9b8bf6`.
 Kein Live-Drive-Lauf, kein Workflow-Dispatch, kein Push, PR, Merge oder Deploy.
 

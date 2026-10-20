@@ -10,7 +10,13 @@ Diese Vorbereitung startet keinen Live-Abgleich, keinen Push, PR, Merge oder Dep
 `legacy-…`-IDs und unveränderten bisherigen Kategorie-Schlüsseln. Die tatsächlichen
 Drive-Ordner-IDs sind noch unbekannt und werden **nicht geraten**. Die erste
 Inventur ordnet sie anhand vorhandener Motiv-IDs und eindeutiger Ordnernamen zu.
-Mehrdeutige Erstzuordnungen brechen ab und verlangen eine kontrollierte Korrektur.
+Mehrdeutige oder widersprüchliche Erstzuordnungen brechen mit einer festen,
+metadatenfreien Meldung ab. Namenshinweise werden auch in tieferen Ordnern geprüft.
+Ein Motivfund in einem anderen Ordner überstimmt keinen passenden Ordnernamen.
+Ein erstmals erkannter, verschobener/umbenannter Unterbaum ohne eindeutige
+Zuordnung verlangt ebenfalls eine private Prüfung statt einer Bindung an seinen
+neuen Hauptordner. Bereits gespeicherte Ordnerbindungen bleiben bei Umbenennung
+und Verschiebung unverändert.
 
 Neue Kategorien erhalten `drive-<Ordner-ID>` als ID und Schlüssel, unabhängig vom
 Namen und Speicherort. Eltern-ID und Anzeigename können sich ändern. Tiefere Ordner
@@ -57,8 +63,9 @@ Alte Vorschauversionen werden nicht automatisch entfernt.
 
 Die bestehenden 412 Herkunftseinträge enthalten noch keine Prüfsumme des
 Drive-Originals. Daher ist beim ersten vollständigen Abgleich eine **einmalige
-Verifikation der 412 lesbaren Originale** notwendig. Die Inventur meldet hierfür
-`unverifiedExisting`, geplante Downloads und Originalbytes aus Drive-Metadaten.
+Verifikation der 412 lesbaren Originale** notwendig. Die öffentliche Inventur meldet
+hierfür nur die Anzahl `unverifiedExisting` und geplanter Downloads, keine
+Originalgrössen oder Quelldetails.
 Danach verhindert ein unveränderter Original-Fingerprint erneute Downloads und
 Verarbeitung. Eine Encoder-/Pipeline-Änderung erfordert bewusst neue Verifikation.
 Ohne MD5 muss konservativ die Dateiversion verwendet werden, was bei reinen
@@ -104,12 +111,50 @@ gepinnt. Standard-Ubuntu-Runner und die freien Bibliotheken benötigen keinen ne
 kostenpflichtigen Dienst. Laufzeit-/API-/Speicherquoten sind weiterhin einzuhalten.
 
 Der Bericht liegt nur in `RUNNER_TEMP` und wird in der Job-Zusammenfassung sowie
-im PR-Text angezeigt: Ordner mit Ausschlussentscheidung, Kategoriezuordnung, neue
-und geänderte Bilder, einmalig verifizierte/übersprungene Bilder und beibehaltene
-fehlende IDs. Berichte sind grössenbegrenzt und behandeln Dateinamen als Daten.
+im PR-Text angezeigt. Beide Modi verwenden dieselbe geschlossene Ausgabe:
+feste Statusmeldungen und Gesamtzahlen für Ordner, Ausschlüsse und Bildänderungen.
+Keine tatsächlichen Ordnernamen, Datei-/Ordner-IDs, Dateinamen, Pfade, MIME-Typen,
+Dateigrössen oder Kategoriezuordnungen werden ausgegeben. Auch Fehler enthalten
+keine Rohantworten oder dynamischen Exception-Texte; Zuordnungskonflikte verweisen
+mit einer festen Meldung auf die private Prüfung. Interne Details bleiben nur im
+Prozessspeicher, es gibt keine Option zum Export eines Detailberichts.
 Es gibt **keinen Artefakt-Upload und keinen Originaldatei-Cache**. Unbekannte
 API-Felder, Antworttexte und kurzlebige Download-Links werden nicht übernommen.
 Bekannte Geheimnis-Muster führen vor einer Veröffentlichung zum Abbruch.
+
+### Private Erstprüfung und bestätigte Bindungen
+
+Die öffentliche Inventur ersetzt keine Prüfung der tatsächlichen Zuordnung.
+Vor dem ersten vollständigen Import prüft der Eigentümer auf einem vertrauenswürdigen
+Gerät die Drive-Ordner, ihre URLs/IDs, Ausschlüsse und vorhandenen Motiv-IDs direkt
+in der Drive-Oberfläche. Keine Screenshots, Namen oder Detailtabellen in öffentliche
+Issues, Actions-Logs, Job-Zusammenfassungen, PR-Texte oder Artefakte kopieren.
+Alternativ ist nach eigener Freigabe eine lokale Metadatenprüfung in einer privaten
+Sitzung möglich; diese Änderung startet eine solche Sitzung nicht.
+
+Eine manuell geprüfte Erstzuordnung kann als private JSON-Datei **ausserhalb** des
+Repositorys mit restriktiven Dateirechten bereitgestellt werden. Schema mit reinen
+Platzhaltern: `{"version":1,"bindings":{"BESTEHENDE_KATEGORIE_ID":"GEPRUEFTE_ORDNER_ID"}}`.
+Die Kategorie-ID wird aus `data/categories.json` übernommen; IDs und Schlüssel
+werden nicht neu erzeugt. Der lokale CLI-Parameter lautet
+`--category-bindings /privater/pfad/bindings.json`. Er kann einen Konflikt bewusst
+auflösen, aber keine bereits gespeicherte Bindung umbiegen. Unbekannte Kategorien,
+nicht sichtbare/ausgeschlossene Zielordner und doppelte Bindungen werden abgelehnt.
+Der Parameter wird in öffentlichen Actions (`GITHUB_ACTIONS=true`) und bei einem
+Dateipfad innerhalb des Repositorys abgelehnt. Die Datei wird weder kopiert noch
+geloggt oder dem PR hinzugefügt. Bei Inventur bleibt die Entscheidung nur im RAM;
+bei einem später separat freigegebenen lokalen `--apply` wird sie als normale
+Kategoriebindung gespeichert. Bis zur geprüften Übernahme dieser Bindung muss
+ein öffentlicher CI-Lauf mit demselben Konflikt weiterhin abbrechen.
+
+Wichtig: Der anonyme Bericht macht **nicht** die generierten App-Daten anonym.
+Ein späterer öffentlicher Motiv-PR enthält notwendigerweise Bilder, öffentliche
+Motivnamen/IDs, Vorschaupfade und Herkunftszuordnungen in seinen Dateidiffs; die
+PR-Action kann solche Pfade protokollieren. Auch Ausschluss-IDs werden im Sync-State
+gespeichert. Vertrauliche Quellen dürfen daher nicht ungeprüft in `prepare-pr`
+übernommen werden. Soll auch diese Zuordnung geheim bleiben, sind ein privater
+Importprozess und eine gesonderte Bereinigung der öffentlichen Daten nötig;
+der öffentliche Bericht allein kann das nicht leisten.
 
 ## PR-Erstellung und sicherer Wiederholungslauf
 
@@ -149,10 +194,11 @@ nicht zum Überschreiben fremder Änderungen. Den Bot-Branch nicht manuell bearb
    Eine bereits main-basierte Pages-Konfiguration kann auf einen main-Commit
    reagieren; das muss vor der Übernahme separat mit „keine Veröffentlichung“
    abgestimmt werden. Der Sync-Workflow selbst hat keinen Deployment-Schritt.
-3. Workflow manuell auf **main**, Modus **inventory** starten. Dies liest nur
-   Metadaten. Elf tatsächliche Ordner, Ausschlüsse, Bindung der neun Kategorien,
-   vorhandene 412 IDs, fehlende IDs, neue Bilder und Originalgrössen kontrollieren.
-   Zusätzliche Ausschlüsse gegebenenfalls anhand echter Ordner-IDs konfigurieren.
+3. Zuerst Ordner, Ausschlüsse und Erstbindungen privat wie oben prüfen. Nach
+   separater Freigabe Workflow auf **main**, Modus **inventory** starten: Dieser
+   liest nur Metadaten und veröffentlicht ausschliesslich Status und Gesamtzahlen.
+   Namen und Zuordnungen können nicht aus dem öffentlichen Bericht geprüft werden.
+   Konflikte privat lösen, niemals öffentliche Detailausgaben einschalten.
 4. Erst nach Freigabe dieses Inventurberichts `prepare-pr` einmal manuell starten.
    Er darf temporär Originalinhalte lesen und einen Entwurfs-PR erstellen. Keine
    Originalinhalte werden gespeichert oder veröffentlicht. Initiale Bildprüfung

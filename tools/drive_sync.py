@@ -5,7 +5,6 @@ No Git push, PR, timer or deployment. Originals exist in memory only.
 import argparse
 import copy
 import hashlib
-import html
 import io
 import json
 import os
@@ -35,6 +34,29 @@ SECRET = re.compile(r'-----BEGIN [A-Z ]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{3
 
 class SyncError(Exception):
     pass
+
+
+MAPPING_ERROR = ('Widerspruechliche oder mehrdeutige Erstzuordnung. Keine Aenderungen angewandt. '
+                 'Ordnernamen und bisherige Motivzuordnung privat pruefen; eine bestaetigte '
+                 'Zuordnung lokal mit --category-bindings angeben.')
+
+
+class MappingError(SyncError):
+    def __init__(self):
+        super().__init__(MAPPING_ERROR)
+
+
+def load_category_bindings(path, root):
+    """Private, local-only input; never upload this file or use it in public CI."""
+    if os.environ.get('GITHUB_ACTIONS') == 'true' or path.resolve().is_relative_to(root.resolve()):
+        raise SyncError('Private mapping input must stay outside the repository and public CI.')
+    data = images.read_json(path)
+    if not isinstance(data, dict) or set(data) != {'version', 'bindings'} or data['version'] != 1 or not isinstance(data['bindings'], dict):
+        raise MappingError()
+    for category_id, folder_id in data['bindings'].items():
+        images.valid_id(category_id)
+        images.valid_id(folder_id)
+    return data['bindings']
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -159,7 +181,7 @@ class DriveAPI:
         return data
 
 
-def inventory(config, api, old_categories, old_entries, old_state):
+def inventory(config, api, old_categories, old_entries, old_state, bindings=None):
     if config.get('version') != 1 or config.get('deleteMissing') is not False:
         raise SyncError('Only version 1 sources with deleteMissing=false are supported.')
     categories = copy.deepcopy(old_categories)
@@ -215,20 +237,32 @@ def inventory(config, api, old_categories, old_entries, old_state):
         raise SyncError('No readable direct source folders; verify access before proceeding.')
     if len({c['id'] for c in categories}) != len(categories) or len({c['key'] for c in categories}) != len(categories):
         raise SyncError('Duplicate category identity.')
+    # Explicit decisions may resolve FIRST bindings only, never change a saved identity.
+    by_category_id = {c['id']: c for c in categories}
+    for category_id, folder_id in (bindings or {}).items():
+        category = by_category_id.get(category_id)
+        if not category or folder_id not in folders or category.get('folderId') not in (None, folder_id):
+            raise MappingError()
+        category['folderId'] = folder_id
     bound = {c['folderId']: c for c in categories if c.get('folderId')}
+    if len(bound) != sum(bool(c.get('folderId')) for c in categories):
+        raise MappingError()
     for category in categories:
         if category.get('folderId'):
             continue
         evidence = {item['topId'] for fid, item in files.items() if fid in old_entries and old_entries[fid]['category'] == category['key']}
-        if len(evidence) > 1:
-            raise SyncError('Ambiguous initial category mapping; no update applied.')
-        candidates = evidence or {fid for fid, folder in folders.items() if folder['parentFolderId'] is None and folder['name'].strip().casefold() == category['name'].strip().casefold()}
-        if len(candidates) > 1:
-            raise SyncError('Ambiguous initial category name; no update applied.')
+        names = {fid for fid, folder in folders.items() if folder['name'].strip().casefold() == category['name'].strip().casefold()}
+        if len(evidence) > 1 or len(names) > 1 or (evidence and names and evidence != names):
+            raise MappingError()
+        if evidence and not names and any(item['folderId'] != item['topId'] for fid, item in files.items() if fid in old_entries and old_entries[fid]['category'] == category['key']):
+            # Before any folder IDs are known, a renamed/moved subtree cannot be
+            # distinguished from a move of individual images into another category.
+            raise MappingError()
+        candidates = evidence or names
         if candidates:
             fid = next(iter(candidates))
             if fid in bound:
-                raise SyncError('Two legacy categories map to one folder.')
+                raise MappingError()
             category['folderId'] = fid
             bound[fid] = category
     new = []
@@ -316,6 +350,7 @@ def convert_record(item, old, category, api, staged):
     old_variants = entry.get('variants', {})
     fingerprint = content_fingerprint(item)
     entry.update({'id': item['id'], 'name': re.sub(r'\.[^/.]+$', '', item['name']) or item['name'], 'category': category['key'], 'categoryId': category['id'], 'source': source_data(item)})
+    entry['sourceFingerprint'] = images.source_fingerprint(entry['source'])
     if reusable(old, item):
         return entry, {}, 'unchanged' if entry == old else 'metadataOnlyImages'
     blob = api.download(item)
@@ -377,7 +412,7 @@ def validate_categories(root):
     return len(categories)
 
 
-def synchronize(root, api, apply=False):
+def synchronize(root, api, apply=False, bindings=None):
     """A full scan must succeed before any repository output is changed."""
     root = root.resolve()
     manifest = images.read_json(root / 'data/motifs-manifest.json')
@@ -385,7 +420,7 @@ def synchronize(root, api, apply=False):
     old_categories = images.read_json(root / 'data/categories.json')['categories']
     config = images.read_json(root / 'motifs.sources.json')
     state = images.read_json(root / 'data/drive-sync-state.json', {'version': 1, 'excludedFolders': {}})
-    categories, files, bound, state, report = inventory(config, api, old_categories, old_entries, state)
+    categories, files, bound, state, report = inventory(config, api, old_categories, old_entries, state, bindings)
     public_text(report)
     public_manifest(manifest)
     if not apply:
@@ -403,9 +438,8 @@ def synchronize(root, api, apply=False):
         try:
             entry, new_payloads, action = convert_record(item, old_entries.get(file_id), bound[item['folderId']], api, root)
         except Exception as error:
-            # Only our fixed diagnostics are public; never expose raw API/decoder errors.
-            reason = str(error) if isinstance(error, SyncError) else 'Invalid image or local processing error.'
-            raise SyncError('Image import failed for motif ID ' + file_id + ': ' + reason + ' No outputs applied.') from None
+            # IDs, file names and even exception text may contain private source data.
+            raise SyncError('Image import failed. No outputs applied; inspect the source privately.') from None
         entries[file_id] = entry
         payloads.update(new_payloads)
         if action == 'unchanged':
@@ -449,20 +483,24 @@ def synchronize(root, api, apply=False):
 
 
 def write_report(report, destination):
-    public_text(report)
+    """Public output is a closed schema of fixed labels, status and aggregate counts."""
     text = '# Google-Drive-Abgleich\n\n'
     text += 'Keine Löschung, kein automatischer Merge und kein Deployment.\n\n'
-    for key in ['mode', 'plannedDownloads', 'plannedOriginalBytes', 'oversizedOriginals', 'newCategories', 'renamedCategories', 'movedCategories', 'newImages', 'changedImages', 'verifiedExisting', 'unchangedImages', 'metadataOnlyImages', 'missingImagesRetained', 'missingCategoriesRetained', 'unverifiedExisting', 'skippedMimeTypes']:
+    mode = report.get('mode')
+    if mode not in ('inventory', 'prepare-pr'):
+        raise SyncError('Invalid report mode.')
+    text += '- Status: abgeschlossen\n- Modus: ' + mode + '\n'
+    for key in ['plannedDownloads', 'oversizedOriginals', 'newCategories', 'renamedCategories', 'movedCategories', 'newImages', 'changedImages', 'verifiedExisting', 'unchangedImages', 'metadataOnlyImages', 'missingImagesRetained', 'missingCategoriesRetained', 'unverifiedExisting']:
         if key in report:
             value = report[key]
-            text += f'- {key}: {len(value) if isinstance(value, (list, dict)) else value}\n'
-    details = {key: report[key][:50] for key in ['newCategories', 'renamedCategories', 'movedCategories', 'newImages', 'changedImages', 'missingImagesRetained'] if report.get(key)}
-    text += '\nKategoriezuordnung (maximal 50):\n<pre>' + html.escape(json.dumps(report['categoryBindings'][:50], ensure_ascii=False, indent=2)) + '</pre>\n'
-    text += '\nDetails (jeweils maximal 50 IDs; vollständige Zuordnung im Katalog-Diff):\n<pre>' + html.escape(json.dumps(details, ensure_ascii=False, indent=2)) + '</pre>\n'
-    roots = [{**item, 'name': item['name'][:120]} for item in report['rootFolders'][:100]]
-    text += '\nDirekte Drive-Unterordner mit Ausschlussentscheidung (maximal 100):\n<pre>' + html.escape(json.dumps(roots, ensure_ascii=False, indent=2)) + '</pre>\n'
-    if len(text.encode('utf-8')) > 60000:
-        text = '# Google-Drive-Abgleich\n\nDetailbericht überschreitet die PR-Grössenbegrenzung. Generierte Katalog-/Kategorie-Diffs prüfen. Keine Löschung, kein Merge oder Deployment.\n'
+            count = len(value) if isinstance(value, list) else value
+            if type(count) is not int or count < 0:
+                raise SyncError('Invalid report count.')
+            text += f'- {key}: {count}\n'
+    roots = report.get('rootFolders', [])
+    text += f'- Direkte Unterordner: {len(roots)}\n'
+    text += f'- Ausgeschlossene direkte Unterordner: {sum(bool(item.get("excluded")) for item in roots)}\n'
+    text += '\nZuordnungsdetails ausschliesslich privat pruefen. Keine Quelldaten in diesem Bericht.\n'
     Path(destination).write_text(text, encoding='utf-8')
 
 
@@ -470,18 +508,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--apply', action='store_true', help='Prepare sanitized outputs; never push/merge/deploy')
+    parser.add_argument('--category-bindings', type=Path, help='Private local-only first bindings JSON outside the repository')
     parser.add_argument('--report', type=Path, required=True, help='Outside the repository, e.g. RUNNER_TEMP/report.md')
     args = parser.parse_args()
     try:
         if args.report.resolve().is_relative_to(args.repo.resolve()):
             raise SyncError('Report must be outside the repository.')
+        bindings = load_category_bindings(args.category_bindings, args.repo) if args.category_bindings else None
         api = DriveAPI(os.environ.get('TIMBERART_DRIVE_ACCESS_TOKEN'))
-        report = synchronize(args.repo, api, args.apply)
+        report = synchronize(args.repo, api, args.apply, bindings)
         write_report(report, args.report)
         print('Read-only Drive scan completed; report written outside the repository. No push or deployment.')
         return 0
     except Exception as error:
-        message = str(error) if isinstance(error, SyncError) else 'Local sync validation failed; no success declared.'
+        # Never emit exception text: API, decoder and validation errors can contain IDs.
+        message = MAPPING_ERROR if isinstance(error, MappingError) else 'Drive sync failed; no success declared. Review access and source data privately.'
         print('::error::' + message, file=sys.stderr)
         return 1
 
