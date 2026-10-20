@@ -1,5 +1,9 @@
 # Lokale Motivvorschauen
 
+Für den neuen authentifizierten Automatik-Import und stabile Kategorien gilt
+[drive-sync.md](drive-sync.md). Die nachfolgenden ursprünglichen CLI-Beispiele
+beschreiben den bisherigen öffentlichen Einzelimport, nicht den neuen Workflow.
+
 Die Anwendung lädt Motivbilder ausschliesslich relativ zur Seite aus
 `assets/motifs/<Drive-Datei-ID>/`. Das funktioniert auch unter dem Pages-Unterpfad
 `/timberart-design-vorschau/`. Google-Login und Drittanbieter-Cookies sind dafür

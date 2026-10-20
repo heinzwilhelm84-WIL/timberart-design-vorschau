@@ -8,7 +8,8 @@
       "excludeFolderNamesContaining": [
         "LOGO",
         "Schriften"
-      ]
+      ],
+      "excludeFolderIds": []
     }
   ],
   "imageMimeTypes": [

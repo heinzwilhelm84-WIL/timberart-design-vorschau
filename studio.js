@@ -1,5 +1,5 @@
 /* UI layer: font definitions and design UI are retained; preview catalog and test handlers live in index.html. */
-const studio = { view: 'home', category: 'all', catalog: [], ready: false, loading: null, query: '', request: 0, returnFocus: null };
+const studio = { view: 'home', category: 'all', catalog: [], categories: [], ready: false, loading: null, query: '', request: 0, returnFocus: null };
 const CATEGORY_STYLE = {
     'Alu-Kreditkarte': ['Alu-Kreditkarten', 'Kleine Karte. Grosse Botschaft.', '#f1e9f6'],
     'CAP-Design': ['Cap-Designs', 'Ein Statement für deinen Look.', '#e8eee5'],
@@ -16,7 +16,21 @@ function studioIcon(name) {
     return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.spark}</svg>`;
 }
 function studioEscape(value) { return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function studioLabel(category) { return CATEGORY_STYLE[category]?.[0] || category.trim(); }
+function studioLabel(category) {
+    const record = studio.categories.find(c => c.key === category);
+    if (record && (record.displayName || record.name) !== category) return record.displayName || record.name;
+    return CATEGORY_STYLE[category]?.[0] || category.trim();
+}
+async function studioLoadCategories() {
+    try {
+        const response = await fetch('./data/categories.json');
+        if (!response.ok) throw Error();
+        const data = await response.json();
+        if (data.version !== 1 || !Array.isArray(data.categories) || !data.categories.every(c => typeof c.id === 'string' && typeof c.key === 'string' && typeof c.name === 'string' && (c.displayName == null || typeof c.displayName === 'string'))) throw Error();
+        if (new Set(data.categories.map(c => c.id)).size !== data.categories.length || new Set(data.categories.map(c => c.key)).size !== data.categories.length) throw Error();
+        studio.categories = data.categories;
+    } catch (_) { studio.categories = []; }
+}
 function studioPrettyName(name) { return name.replace(/^\d+[_-]/, '').replace(/_/g, ' '); }
 function studioNavigation() {
     document.getElementById('navContainer').innerHTML = [
@@ -28,9 +42,9 @@ async function initStudio() {
     try { loadFavorites(); } catch (e) { favorites = []; }
     if (!Array.isArray(favorites)) favorites = [];
     studioNavigation(); studioHome(); loadLogo();
-    studio.loading = loadAllDesigns().then(() => {
+    studio.loading = Promise.all([loadAllDesigns(), studioLoadCategories()]).then(() => {
         studio.catalog = [...allDesigns];
-        allCategories = [...new Set(studio.catalog.map(d => d.category))].sort();
+        allCategories = [...new Set([...studio.categories.map(c => c.key), ...studio.catalog.map(d => d.category)])].sort((a,b) => studioLabel(a).localeCompare(studioLabel(b), 'de'));
         studio.ready = true;
         if (studio.view==='home') studioHome();
         return studio.catalog;
@@ -56,7 +70,7 @@ function studioHome() {
         </section>
         <div class="studio-strip"><span>${studioIcon('image')} <strong>${studio.ready?studio.catalog.length:'…'} Motive</strong> zum Entdecken</span><span>${studioIcon('spark')} <strong>30 Schriften</strong> für deine Worte</span><span>${studioIcon('gift')} <strong>${studio.ready?groups.length:'…'} Kategorien</strong> voller Ideen</span></div>
         <section class="section-wrap" id="categories" aria-labelledby="categoriesTitle"><div class="section-heading"><div><div class="eyebrow">Was möchtest du gestalten?</div><h2 id="categoriesTitle">Eine Idee. Viele Möglichkeiten.</h2><p>Such dir etwas aus, das Freude macht.</p></div><button class="text-link" onclick="studioNavigate('motifs')">Alle Motive ansehen ${studioIcon('arrow')}</button></div>
-        ${groups.length?`<div class="category-grid">${groups.map(({cat,designs},i)=>`<article class="category-card"><button class="category-open" data-category="${studioEscape(cat)}"><div class="category-picture" style="background:${CATEGORY_STYLE[cat]?.[2]||'#ede7f8'}"><span class="category-number">KOLLEKTION ${String(i+1).padStart(2,'0')}</span>${motifImageTag(designs[0], {alt:studioLabel(cat)})}</div><div class="category-info"><div><h3>${studioEscape(studioLabel(cat))}</h3><p>${designs.length} Motive entdecken</p></div><span class="round-arrow">${studioIcon('arrow')}</span></div></button></article>`).join('')}</div>`:studio.ready?studioEmpty('Die Motive sind gerade nicht erreichbar.','Bitte prüfe die Verbindung und versuche es erneut.','Erneut laden',"location.reload()"):'<div class="loading" role="status"><span class="spinner"></span>Deine Geschenkideen werden geladen …</div>'}
+        ${groups.length?`<div class="category-grid">${groups.map(({cat,designs},i)=>`<article class="category-card"><button class="category-open" data-category="${studioEscape(cat)}"><div class="category-picture" style="background:${CATEGORY_STYLE[cat]?.[2]||'#ede7f8'}"><span class="category-number">KOLLEKTION ${String(i+1).padStart(2,'0')}</span>${designs.length ? motifImageTag(designs[0], {alt:studioLabel(cat)}) : studioIcon('image')}</div><div class="category-info"><div><h3>${studioEscape(studioLabel(cat))}</h3><p>${designs.length} Motive entdecken</p></div><span class="round-arrow">${studioIcon('arrow')}</span></div></button></article>`).join('')}</div>`:studio.ready?studioEmpty('Die Motive sind gerade nicht erreichbar.','Bitte prüfe die Verbindung und versuche es erneut.','Erneut laden',"location.reload()"):'<div class="loading" role="status"><span class="spinner"></span>Deine Geschenkideen werden geladen …</div>'}
         <div class="font-banner"><div class="type-art" aria-hidden="true">Aa</div><div><div class="eyebrow">Worte mit Persönlichkeit</div><h2>Dein Text. Dein Stil.</h2><p>Elegant, verspielt oder ganz klar: Finde deine Lieblingsschrift.</p></div><button class="action" onclick="studioNavigate('schriften')">Zum Schriftatelier ${studioIcon('arrow')}</button></div></section>`;
     document.querySelectorAll('.category-open').forEach(btn=>btn.addEventListener('click',()=>studioNavigate('motifs',btn.dataset.category)));
 }

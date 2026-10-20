@@ -294,7 +294,8 @@ def build_catalog(entries):
         images = [{"url": "./" + entry["variants"][str(edge)]["path"], "edge": edge,
                    "width": entry["variants"][str(edge)]["width"], "height": entry["variants"][str(edge)]["height"]} for edge in EDGES]
         result.append({"id": entry["id"], "name": entry["name"], "category": entry["category"],
-                       "url": images[0]["url"], "detailUrl": images[1]["url"], "images": images})
+                       "url": images[0]["url"], "detailUrl": images[1]["url"], "images": images,
+                       **({"categoryId": entry["categoryId"]} if "categoryId" in entry else {})})
     return result
 
 
