@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'inventory = metadata; dry-run = import and classify without publication; prepare-pr = draft PR'
+        description: 'inventory = metadata; diagnose-metadata = read-only causes; dry-run = classify; prepare-pr = draft PR'
         required: true
         default: inventory
         type: choice
         options:
           - inventory
+          - diagnose-metadata
           - dry-run
           - prepare-pr
   # GitHub cron uses UTC. Automatic additions remain disarmed below.
@@ -60,6 +61,44 @@ jobs:
         run: python3 -B tools/drive_sync.py --report "$RUNNER_TEMP/drive-sync-report.md"
       - name: Show sanitized inventory
         run: cat "$RUNNER_TEMP/drive-sync-report.md" >> "$GITHUB_STEP_SUMMARY"
+
+  diagnose-metadata:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'diagnose-metadata' &&
+          github.repository == 'heinzwilhelm84-WIL/timberart-design-vorschau' &&
+          github.repository_id == '1425353605' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout trusted main for manual metadata diagnosis
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Install the pinned free image library
+        run: python3 -m pip install --disable-pip-version-check -r tools/requirements-images.txt
+      - name: Authenticate with metadata-only scope
+        id: google-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: banded-meridian-424821-j9
+          workload_identity_provider: projects/949832006175/locations/global/workloadIdentityPools/timberart-github-sync/providers/timberart-github-actions
+          service_account: timberart-drive-sync@banded-meridian-424821-j9.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive.metadata.readonly
+          access_token_lifetime: 900s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Diagnose existing motifs without downloads or repository writes
+        env:
+          TIMBERART_DRIVE_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+        run: python3 -B tools/drive_sync.py --diagnose-metadata --report "$RUNNER_TEMP/drive-metadata-diagnosis.md"
+      - name: Show fixed aggregate causes only
+        run: cat "$RUNNER_TEMP/drive-metadata-diagnosis.md" >> "$GITHUB_STEP_SUMMARY"
 
   dry-run:
     if: >-

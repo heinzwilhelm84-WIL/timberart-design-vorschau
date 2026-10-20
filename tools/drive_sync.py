@@ -345,12 +345,18 @@ def screen_source(blob, mime):
         raise SyncError('Invalid raster image or unsupported colour profile.') from None
 
 
-def convert_record(item, old, category, api, staged):
+def metadata_record(item, old, category):
+    """Shared, in-memory metadata projection; no downloads or writes."""
     entry = copy.deepcopy(old) if old else {}
-    old_variants = entry.get('variants', {})
-    fingerprint = content_fingerprint(item)
     entry.update({'id': item['id'], 'name': re.sub(r'\.[^/.]+$', '', item['name']) or item['name'], 'category': category['key'], 'categoryId': category['id'], 'source': source_data(item)})
     entry['sourceFingerprint'] = images.source_fingerprint(entry['source'])
+    return entry
+
+
+def convert_record(item, old, category, api, staged):
+    entry = metadata_record(item, old, category)
+    old_variants = entry.get('variants', {})
+    fingerprint = content_fingerprint(item)
     if reusable(old, item):
         return entry, {}, 'unchanged' if entry == old else 'metadataOnlyImages'
     blob = api.download(item)
@@ -482,6 +488,81 @@ def synchronize(root, api, apply=False, bindings=None):
     return report
 
 
+def diagnose_metadata(root, api):
+    """Read current catalog/state and Drive metadata. Return ONLY fixed aggregate labels.
+
+    No candidate import, PR seed, media downloads, catalog writes or private exports.
+    A metadata-only scan cannot prove preview equality when reuse is unavailable.
+    """
+    root = root.resolve()
+    manifest = images.read_json(root / 'data/motifs-manifest.json')
+    public_manifest(manifest)
+    validate_categories(root)
+    old_entries = {m['id']: m for m in manifest['motifs']}
+    old_categories = images.read_json(root / 'data/categories.json')['categories']
+    config = images.read_json(root / 'motifs.sources.json')
+    state = images.read_json(root / 'data/drive-sync-state.json', {'version': 1, 'excludedFolders': {}})
+    categories, files, bound, _, _ = inventory(config, api, old_categories, old_entries, state)
+    fields = (
+        ('originalFilename', 'Quelldateiname'), ('modifiedTime', 'Aenderungszeit'),
+        ('version', 'Dateiversion'), ('md5Checksum', 'Inhaltspruefsumme'),
+        ('size', 'Dateigroesse'), ('mimeType', 'Dateityp'),
+        ('folderIds', 'Direkter Quellordner'), ('rootFolderId', 'Quellhauptordner'),
+        ('provider', 'Quellanbieter'), ('fileId', 'Quellidentitaet'),
+        ('originalUrl', 'Quellverweis'),
+    )
+    counts = {label: 0 for _, label in fields}
+    for label in ('Weitere Quellfelder', 'Anzeigename', 'Kategoriezuordnung',
+                  'Quell-Fingerprint', 'Gespeicherter Quell-Fingerprint inkonsistent',
+                  'Importversion', 'Vorschaugenerator', 'Gespeicherter Inhalts-Fingerprint abweichend oder fehlend'):
+        counts[label] = 0
+    missing = len(set(old_entries) - set(files))
+    changed = metadata_only = unverified = 0
+    for mid, old in old_entries.items():
+        item = files.get(mid)
+        if item is None:
+            continue
+        expected = metadata_record(item, old, bound[item['folderId']])
+        different = expected != old
+        changed += different
+        can_reuse = reusable(old, item)
+        metadata_only += different and can_reuse
+        unverified += not can_reuse
+        for key, label in fields:
+            counts[label] += (old['source'].get(key) != expected['source'].get(key)
+                              or (key in old['source']) != (key in expected['source']))
+        known = {key for key, _ in fields}
+        counts['Weitere Quellfelder'] += ({k:v for k,v in old['source'].items() if k not in known}
+                                         != {k:v for k,v in expected['source'].items() if k not in known})
+        counts['Anzeigename'] += old.get('name') != expected['name']
+        counts['Kategoriezuordnung'] += any(old.get(k) != expected[k] for k in ('category', 'categoryId'))
+        counts['Quell-Fingerprint'] += old.get('sourceFingerprint') != expected['sourceFingerprint']
+        counts['Gespeicherter Quell-Fingerprint inkonsistent'] += old.get('sourceFingerprint') != images.source_fingerprint(old['source'])
+        counts['Gespeicherter Inhalts-Fingerprint abweichend oder fehlend'] += (
+            not content_fingerprint(item) or old.get('originalFingerprint') != content_fingerprint(item))
+        counts['Importversion'] += old.get('syncVersion') != SYNC_VERSION
+        counts['Vorschaugenerator'] += old.get('generator') != images.GENERATOR
+    by_id = {c['id']: c for c in categories}
+    changed_categories = sum(by_id[c['id']] != c for c in old_categories)
+    result = '# Drive-Sync Metadaten-Diagnose\n\nStatus: abgeschlossen; ausschliesslich lesend.\n'
+    totals = [
+        ('Gepruefte bestehende Motive', len(old_entries)),
+        ('Durch Metadaten oder Sichtbarkeit erklaerte Rueckhaltungen', missing + changed),
+        ('Im Scan nicht sichtbare bestehende Motive', missing),
+        ('Bestehende Motive mit abweichender Metadatenprojektion', changed),
+        ('Davon bei wiederverwendbarem Bild nur Metadatenabweichung', metadata_only),
+        ('Sichtbare bestehende Motive mit notwendiger Bildverifikation (nicht ausgefuehrt)', unverified),
+        ('Bestehende Kategorien mit abweichenden Metadaten', changed_categories),
+    ]
+    result += ''.join(f'- {label}: {count}\n' for label, count in totals + list(counts.items()))
+    result += ('\nFeldzaehlungen koennen dasselbe Motiv mehrfach betreffen. '
+               'Nicht sichtbar beweist keine Loeschung: auch Berechtigungen, Ausschluesse oder Dateitypen kommen infrage. '
+               'Geaenderte Pruefsummen sind Metadatenbefunde, kein visueller Bildvergleich. '
+               'Dies ist eine aktuelle Aufnahme gegen den ausgecheckten Katalog, keine Rekonstruktion eines frueheren Laufs. '
+               'Bei notwendiger Bildverifikation bleibt die genaue Importabweichung offen.\n')
+    return result
+
+
 def write_additions_evidence(report, root, destination):
     """Private ephemeral scan evidence; never log or upload it to a public artifact."""
     import subprocess
@@ -530,7 +611,9 @@ def write_report(report, destination):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument('--apply', action='store_true', help='Prepare sanitized outputs; never push/merge/deploy')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--apply', action='store_true', help='Prepare sanitized outputs; never push/merge/deploy')
+    mode.add_argument('--diagnose-metadata', action='store_true', help='Read-only metadata diagnosis; aggregate causes only')
     parser.add_argument('--category-bindings', type=Path, help='Private local-only first bindings JSON outside the repository')
     parser.add_argument('--additions-evidence', type=Path, help='Private ephemeral scan evidence outside repository; never upload')
     parser.add_argument('--report', type=Path, required=True, help='Outside the repository, e.g. RUNNER_TEMP/report.md')
@@ -540,8 +623,15 @@ def main():
             raise SyncError('Report must be outside the repository.')
         if args.additions_evidence and (not args.apply or args.additions_evidence.resolve().is_relative_to(args.repo.resolve()) or args.additions_evidence.resolve() == args.report.resolve()):
             raise SyncError('Private scan evidence needs a separate outside-repository path and apply mode.')
+        if args.diagnose_metadata and (args.category_bindings or args.additions_evidence):
+            raise SyncError('Diagnosis cannot use binding overrides or import evidence.')
         bindings = load_category_bindings(args.category_bindings, args.repo) if args.category_bindings else None
         api = DriveAPI(os.environ.get('TIMBERART_DRIVE_ACCESS_TOKEN'))
+        if args.diagnose_metadata:
+            summary = diagnose_metadata(args.repo, api)
+            args.report.write_text(summary, encoding='utf-8')
+            print('Read-only metadata diagnosis completed; aggregate report only.')
+            return 0
         report = synchronize(args.repo, api, args.apply, bindings)
         write_report(report, args.report)
         if args.additions_evidence:
