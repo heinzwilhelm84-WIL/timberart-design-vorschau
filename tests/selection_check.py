@@ -66,7 +66,7 @@ with sync_playwright() as p:
   # A keyboard user can explicitly select and dismiss without changing data.
   page.locator('.design-text-object').focus();selected(True);page.keyboard.press('Enter');selected(True)
   page.keyboard.press('Escape');selected(False);assert model()==transformed
-  page.locator('#saveDraft').click()
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   assert page.locator('.design-editable,.transform-handle,.transform-controls,.text-is-selected').count()==0
   saved=page.evaluate('personal.drafts[0]');assert saved['transform']==transformed
   assert 'selected' not in saved and 'selection' not in saved
@@ -76,7 +76,7 @@ with sync_playwright() as p:
   assert not page.evaluate('personal.dirty') and model()==transformed
   assert page.evaluate('localStorage.getItem(MAP_KEY)')==raw
   # Preview cards and the comparison never expose editing tools, even on tap/focus.
-  page.locator('[data-view="map"]').click();page.locator('[data-duplicate]').click()
+  page.locator('[data-view="map"]').click();page.locator('[data-duplicate]').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   activate('.draft-card:first-child .design-text-object')
   assert page.locator('.text-is-selected,.transform-handle,.transform-controls,.design-editable').count()==0
   for box in page.locator('[data-compare]').all():box.check()
@@ -86,7 +86,7 @@ with sync_playwright() as p:
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   # Explicitly editing a compared draft starts with a clean preview until selected.
   page.locator('[data-compare-edit]').first.click();selected(False);text_tap();selected(True)
-  page.once('dialog',lambda d:d.accept());page.get_by_role('button',name='Neue Beratung',exact=True).click()
+  page.once('dialog',lambda d:d.accept());page.get_by_role('button',name='Neue Beratung',exact=True).click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   assert page.evaluate('activeTextSurface===null && personal.current===null && personal.drafts.length===0')
   assert not errors,errors
   assert not posts,posts

@@ -92,7 +92,7 @@ with sync_playwright() as p:
   page.locator('#wishText').fill('Für Anna\nVon Herzen!');assert model()==target
   page.locator('#chooseMotif').click();page.locator('[data-design]').nth(2).click();page.get_by_role('button',name='Personalisieren',exact=True).click();assert model()==target
   # All four values must survive save, reload, editing and duplication.
-  page.locator('#saveDraft').click();display_matches('.draft-card .design-surface',target)
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');display_matches('.draft-card .design-surface',target)
   saved=page.evaluate('personal.drafts[0]');assert saved['layoutVersion']==2 and saved['transform']==target
   page.reload();ready();page.locator('[data-view="map"]').click();page.locator('[data-edit]').click();assert model()==target;display_matches('#designSurface',target)
   if mode=='mouse':
@@ -104,11 +104,11 @@ with sync_playwright() as p:
   # A viewport change must not mutate the transform or change relative geometry.
   page.set_viewport_size({'width':390 if width>390 else 1440,'height':1000});display_matches('#designSurface',target);assert model()==target
   page.set_viewport_size({'width':width,'height':height});display_matches('#designSurface',target)
-  page.locator('[data-view="map"]').click();page.locator('[data-duplicate]').click()
+  page.locator('[data-view="map"]').click();page.locator('[data-duplicate]').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   assert page.evaluate('personal.drafts[1].transform')==target
   page.locator('[data-edit]').nth(1).click();page.locator('.design-text-object').focus();page.locator('#textRotation').fill('72')
   assert page.evaluate('personal.drafts[0].transform.rotation')==target['rotation']
-  page.locator('#saveDraft').click();assert page.evaluate('personal.drafts[1].transform.rotation')==72
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert page.evaluate('personal.drafts[1].transform.rotation')==72
   for box in page.locator('[data-compare]').all():box.check()
   page.locator('#compareDrafts').click();assert page.locator('.comparison-grid .design-surface').count()==2
   display_matches('.comparison-grid article:first-child .design-surface',target)
@@ -123,12 +123,12 @@ with sync_playwright() as p:
   assert page.locator('#designSurface').count()==0
   assert 'bisherige Layout' in page.locator('#personalStatus').inner_text()
   assert page.evaluate('JSON.parse(localStorage.getItem(MAP_KEY)).drafts[0].layoutVersion')==1
-  page.locator('#saveDraft').click();assert page.evaluate('personal.drafts[0].id')==saved['id']
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert page.evaluate('personal.drafts[0].id')==saved['id']
   assert page.evaluate('personal.drafts[0].layoutVersion')==1
   # Corrupt transforms cannot overwrite stored data or generate invalid CSS.
   page.evaluate("() => {const d={...personal.drafts[0],layoutVersion:2,transform:{x:null,y:.5,scale:1,rotation:0}};localStorage.setItem(MAP_KEY,JSON.stringify({version:1,epoch:'invalid-test',drafts:[d]}))}")
   page.reload();ready();page.locator('[data-view="map"]').click();assert page.evaluate('personal.blocked')
-  page.once('dialog',lambda d:d.accept());page.get_by_role('button',name='Neue Beratung',exact=True).click()
+  page.once('dialog',lambda d:d.accept());page.get_by_role('button',name='Neue Beratung',exact=True).click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   assert page.evaluate('personal.drafts.length===0 && personal.current===null')
   assert not errors,errors
   assert not outbound,outbound

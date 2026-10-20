@@ -100,13 +100,13 @@ with sync_playwright() as p:
   b=page.locator('#designSurface .frame-v3-object').bounding_box();start=(b['x']+b['width']/2,b['y']+b['height']/2);before=model()
   drag(start,(start[0]+12,start[1]-12),cancel=True);assert model()==before
   page.locator('#designSurface .frame-v3-object').focus();page.keyboard.press('ArrowLeft');assert model()['x']<moved['x']
-  target=model();editor=metrics();page.locator('#saveDraft').click()
+  target=model();editor=metrics();page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   saved=page.evaluate('personal.drafts[0]');assert saved['textFrame']==target and saved['layoutVersion']==3 and 'transform' not in saved
   assert metrics()==editor
   stored=page.evaluate('localStorage.getItem(MAP_KEY)');assert json.loads(stored)['version']==2
   page.reload();ready();page.locator('[data-view="map"]').click();assert metrics()==editor
   assert page.evaluate('localStorage.getItem(MAP_KEY)')==stored
-  page.locator('[data-duplicate]').click();assert page.evaluate('personal.drafts[1].textFrame')==target
+  page.locator('[data-duplicate]').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert page.evaluate('personal.drafts[1].textFrame')==target
   for box in page.locator('[data-compare]').all():box.check()
   page.locator('#compareDrafts').click()
   assert metrics('.comparison-grid .frame-v3-object')==editor
@@ -114,7 +114,7 @@ with sync_playwright() as p:
   page.locator('[data-compare-edit]').nth(1).click();field('width',350);assert page.evaluate('personal.drafts[0].textFrame')==target
   field('height',32);page.locator('#wishText').fill(('Langer Text ohne Zeichenlimit. '*30)+'\nNeue Zeile')
   assert page.locator('.frame-warning').is_visible()
-  text=page.locator('#wishText').input_value();page.locator('#saveDraft').click()
+  text=page.locator('#wishText').input_value();page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   assert page.evaluate('personal.drafts[1].text')==text
   assert page.locator('.draft-card').nth(1).locator('.frame-warning').is_visible()
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
@@ -135,7 +135,7 @@ with sync_playwright() as p:
   assert page.evaluate('personal.drafts')==[v1,v2,v3]
   # Saving one legacy entry in a mixed map must preserve every v3 field and v1/v2.
   page.locator('[data-edit]').nth(1).click();page.locator('#wishText').fill('Legacy bleibt editierbar')
-  page.locator('#saveDraft').click()
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   assert page.evaluate('personal.drafts[1].layoutVersion')==2
   assert page.evaluate('personal.drafts[1].transform')==v2['transform']
   assert page.evaluate('personal.drafts[2]')==v3 and page.evaluate('personal.drafts[0]')==v1

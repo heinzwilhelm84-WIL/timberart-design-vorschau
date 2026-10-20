@@ -101,10 +101,10 @@ with sync_playwright() as p:
   configure(x=300,y=300,width=300,height=180,rotation=31);select();page.locator('[data-frame-handle="e"]').focus();before=model();page.keyboard.press('ArrowRight');assert model()['width']>before['width'] and model()['fontSize']==before['fontSize']
   target=model();assert abs(float(page.locator('#frame-width').input_value())-target['width'])<=.051
   page.locator('#frame-width').focus();page.locator('#frame-width').press('Tab');assert model()==target
-  page.locator('#saveDraft').click();assert page.evaluate('personal.drafts[0].textFrame')==target
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert page.evaluate('personal.drafts[0].textFrame')==target
   page.reload();page.wait_for_function('() => studio.ready');page.locator('[data-view="map"]').click();assert page.evaluate('personal.drafts[0].textFrame')==target
   assert page.locator('.resize-handle,.frame-guide-lines').count()==0
-  page.locator('[data-duplicate]').click()
+  page.locator('[data-duplicate]').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   for box in page.locator('[data-compare]').all():box.check()
   page.locator('#compareDrafts').click();assert page.locator('.resize-handle,.frame-guide-lines').count()==0
   for el in page.locator('.frame-v3-object').all():assert abs(el.evaluate('e=>parseFloat(e.style.width)')-target['width'])<.001

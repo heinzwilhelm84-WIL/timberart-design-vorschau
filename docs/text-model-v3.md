@@ -266,3 +266,13 @@ können andere Umbrüche erzeugen, die vorhandene Warnung bleibt aktiv. Kein neu
 Live-Test von Google Drive/Actions. Die Geometrie- und Platztests ersetzen keine
 Prüfung auf tatsächlichen Werkstücken und keine Gravurfreigabe. Keine Änderungen
 übertragen, nichts veröffentlicht; weitere Schritte warten auf ausdrückliche Freigabe.
+
+
+## Nachtrag: Korrektur der abschliessenden PR-#9-Befunde
+
+Die beiden bei der späteren kritischen Prüfung gefundenen Fälle (Mehrfenster-
+Datenverlust und verspätete Schrift nach Timeout) werden lokal auf demselben
+Branch korrigiert. Details, zusätzliche Speicheranforderungen, neue dauerhafte
+Regressionen und die aktuellen Ergebnisse stehen in
+[text-model-v3-fixes.md](text-model-v3-fixes.md). Die obigen Prüfungen beschreiben
+den vorherigen Entwicklungsstand; sie ersetzen nicht diesen Nachtrag.
