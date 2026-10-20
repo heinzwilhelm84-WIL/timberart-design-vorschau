@@ -48,6 +48,8 @@ with sync_playwright() as p:
    measured=page.locator(selector).evaluate("el => {const s=el.getBoundingClientRect(),o=el.querySelector('.design-text-object').getBoundingClientRect();return {x:(o.x+o.width/2-s.x)/s.width,y:(o.y+o.height/2-s.y)/s.height}}")
    close(measured['x'],t['x'],0.005);close(measured['y'],t['y'],0.005)
   page.goto(URL);ready();page.locator('[data-view="motifs"]').click();page.locator('[data-design]').first.click();page.get_by_role('button',name='Personalisieren',exact=True).click()
+  # Explicit v2 fixture: new drafts use v3; this suite protects legacy gestures.
+  page.evaluate("() => {personal.current.layoutVersion=2;personal.current.transform=textTransform();delete personal.current.textFrame;personalEditor()}")
   page.locator('#wishText').fill('Für Anna\nVon Herzen');position_stage()
   initial=model();s=stage();start=xy('.design-text-object');drag(start,(start[0]+25,start[1]-30))
   moved=model();close(moved['x'],initial['x']+25/s['width']);close(moved['y'],initial['y']-30/s['height'])
@@ -90,7 +92,7 @@ with sync_playwright() as p:
   page.locator('#wishText').fill('Für Anna\nVon Herzen!');assert model()==target
   page.locator('#chooseMotif').click();page.locator('[data-design]').nth(2).click();page.get_by_role('button',name='Personalisieren',exact=True).click();assert model()==target
   # All four values must survive save, reload, editing and duplication.
-  page.locator('#saveDraft').click();display_matches('.draft-card .design-surface',target)
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');display_matches('.draft-card .design-surface',target)
   saved=page.evaluate('personal.drafts[0]');assert saved['layoutVersion']==2 and saved['transform']==target
   page.reload();ready();page.locator('[data-view="map"]').click();page.locator('[data-edit]').click();assert model()==target;display_matches('#designSurface',target)
   if mode=='mouse':
@@ -102,34 +104,35 @@ with sync_playwright() as p:
   # A viewport change must not mutate the transform or change relative geometry.
   page.set_viewport_size({'width':390 if width>390 else 1440,'height':1000});display_matches('#designSurface',target);assert model()==target
   page.set_viewport_size({'width':width,'height':height});display_matches('#designSurface',target)
-  page.locator('[data-view="map"]').click();page.locator('[data-duplicate]').click()
+  page.locator('[data-view="map"]').click();page.locator('[data-duplicate]').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   assert page.evaluate('personal.drafts[1].transform')==target
   page.locator('[data-edit]').nth(1).click();page.locator('.design-text-object').focus();page.locator('#textRotation').fill('72')
   assert page.evaluate('personal.drafts[0].transform.rotation')==target['rotation']
-  page.locator('#saveDraft').click();assert page.evaluate('personal.drafts[1].transform.rotation')==72
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert page.evaluate('personal.drafts[1].transform.rotation')==72
   for box in page.locator('[data-compare]').all():box.check()
   page.locator('#compareDrafts').click();assert page.locator('.comparison-grid .design-surface').count()==2
   display_matches('.comparison-grid article:first-child .design-surface',target)
   assert page.locator('.comparison-grid .transform-handle').count()==0
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   if SCREENSHOTS:page.screenshot(path=str(pathlib.Path(SCREENSHOTS)/f'transform-{width}-{mode}.png'),full_page=True)
-  # Read old saved designs without silently altering them, then explicitly upgrade.
+  # V1 stays V1 even when edited/saved: migration is outside this release.
   page.evaluate("() => {const d={...personal.drafts[0],layoutVersion:1};delete d.transform;localStorage.setItem(MAP_KEY,JSON.stringify({version:1,epoch:'legacy-test',drafts:[d]}))}")
   page.reload();ready();page.locator('[data-view="map"]').click()
   assert page.locator('.draft-card .design-surface').count()==0
-  page.locator('[data-edit]').click();assert model()=={'x':.5,'y':.8,'scale':1,'rotation':0}
-  assert 'ältere Entwurf' in page.locator('#personalStatus').inner_text()
+  page.locator('[data-edit]').click();assert page.evaluate('personal.current.layoutVersion')==1
+  assert page.locator('#designSurface').count()==0
+  assert 'bisherige Layout' in page.locator('#personalStatus').inner_text()
   assert page.evaluate('JSON.parse(localStorage.getItem(MAP_KEY)).drafts[0].layoutVersion')==1
-  page.locator('#saveDraft').click();assert page.evaluate('personal.drafts[0].id')==saved['id']
-  assert page.evaluate('personal.drafts[0].layoutVersion')==2
+  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert page.evaluate('personal.drafts[0].id')==saved['id']
+  assert page.evaluate('personal.drafts[0].layoutVersion')==1
   # Corrupt transforms cannot overwrite stored data or generate invalid CSS.
-  page.evaluate("() => {const d={...personal.drafts[0],transform:{x:null,y:.5,scale:1,rotation:0}};localStorage.setItem(MAP_KEY,JSON.stringify({version:1,epoch:'invalid-test',drafts:[d]}))}")
+  page.evaluate("() => {const d={...personal.drafts[0],layoutVersion:2,transform:{x:null,y:.5,scale:1,rotation:0}};localStorage.setItem(MAP_KEY,JSON.stringify({version:1,epoch:'invalid-test',drafts:[d]}))}")
   page.reload();ready();page.locator('[data-view="map"]').click();assert page.evaluate('personal.blocked')
-  page.once('dialog',lambda d:d.accept());page.get_by_role('button',name='Neue Beratung',exact=True).click()
+  page.once('dialog',lambda d:d.accept());page.get_by_role('button',name='Neue Beratung',exact=True).click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
   assert page.evaluate('personal.drafts.length===0 && personal.current===null')
   assert not errors,errors
   assert not outbound,outbound
-  print(f'PASS {width}px {mode}: real drag/scale/rotate; cancel; bounds; 48px handles; keyboard; exact controls; persistence; responsive geometry; duplicate independence; comparison; legacy migration; invalid data; reset; zero JS errors/POSTs',flush=True)
+  print(f'PASS {width}px {mode}: legacy drag/scale/rotate; cancel; bounds; keyboard; persistence; geometry; comparison; v1 preserved without migration; invalid data; reset; zero JS errors/POSTs',flush=True)
   context.close()
  browser.close()
 server.shutdown()
