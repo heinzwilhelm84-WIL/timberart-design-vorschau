@@ -9062,5 +9062,71 @@
       }
     ],
     "categoryId": "legacy-a505e5ad221779de"
+  },
+  {
+    "id": "1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X",
+    "name": "Breite Schwarzweißgravur des Säntis-Massivs",
+    "category": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+    "url": "./assets/motifs/1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X/600-45c0b3187ba070f6.webp",
+    "detailUrl": "./assets/motifs/1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X/1600-372bdf9174ffbc7f.webp",
+    "images": [
+      {
+        "url": "./assets/motifs/1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X/600-45c0b3187ba070f6.webp",
+        "edge": 600,
+        "width": 600,
+        "height": 278
+      },
+      {
+        "url": "./assets/motifs/1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X/1600-372bdf9174ffbc7f.webp",
+        "edge": 1600,
+        "width": 1600,
+        "height": 742
+      }
+    ],
+    "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
+  },
+  {
+    "id": "1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib",
+    "name": "Hoher Kasten und Kamor im Linolschnitt",
+    "category": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+    "url": "./assets/motifs/1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib/600-c224548ae7b7476d.webp",
+    "detailUrl": "./assets/motifs/1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib/1600-fa83ec58fb021e00.webp",
+    "images": [
+      {
+        "url": "./assets/motifs/1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib/600-c224548ae7b7476d.webp",
+        "edge": 600,
+        "width": 600,
+        "height": 200
+      },
+      {
+        "url": "./assets/motifs/1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib/1600-fa83ec58fb021e00.webp",
+        "edge": 1600,
+        "width": 1600,
+        "height": 535
+      }
+    ],
+    "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
+  },
+  {
+    "id": "1dedfjqbbgf9pCuuLci5vrSMB19O38uD-",
+    "name": "Kreuzberge und Saxerlücke als Panoramagravur",
+    "category": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+    "url": "./assets/motifs/1dedfjqbbgf9pCuuLci5vrSMB19O38uD-/600-8139f10a17b56c2f.webp",
+    "detailUrl": "./assets/motifs/1dedfjqbbgf9pCuuLci5vrSMB19O38uD-/1600-0218a56e4e01d317.webp",
+    "images": [
+      {
+        "url": "./assets/motifs/1dedfjqbbgf9pCuuLci5vrSMB19O38uD-/600-8139f10a17b56c2f.webp",
+        "edge": 600,
+        "width": 600,
+        "height": 200
+      },
+      {
+        "url": "./assets/motifs/1dedfjqbbgf9pCuuLci5vrSMB19O38uD-/1600-0218a56e4e01d317.webp",
+        "edge": 1600,
+        "width": 1600,
+        "height": 533
+      }
+    ],
+    "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
   }
 ]
