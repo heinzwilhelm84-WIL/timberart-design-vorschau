@@ -11,7 +11,7 @@ on:
         options:
           - inventory
           - prepare-pr
-  # GitHub cron uses UTC. Only prepares a draft PR; never merges or deploys.
+  # GitHub cron uses UTC. Automatic additions remain disarmed below.
   schedule:
     - cron: '17 * * * *'
 
@@ -67,6 +67,11 @@ jobs:
           github.repository_id == '1425353605' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # Both this reviewed literal and the repository variable must be enabled later.
+    env:
+      TIMBERART_AUTO_ADDITIONS_ARMED: 'false'
+    outputs:
+      published: ${{ steps.auto-additions.outputs.published }}
     permissions:
       contents: write
       pull-requests: write
@@ -103,13 +108,21 @@ jobs:
       - name: Prepare previews and metadata transactionally
         env:
           TIMBERART_DRIVE_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
-        run: python3 -B tools/drive_sync.py --apply --report "$RUNNER_TEMP/drive-sync-report.md"
+        run: python3 -B tools/drive_sync.py --apply --additions-evidence "$RUNNER_TEMP/drive-additions-evidence.json" --report "$RUNNER_TEMP/drive-sync-report.md"
 
       - name: Show sanitized change report
         run: cat "$RUNNER_TEMP/drive-sync-report.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate public outputs before staging
         run: python3 -B tools/drive_sync_guard.py
+
+      - name: Publish verified additions only (DISARMED)
+        id: auto-additions
+        if: ${{ github.event_name == 'schedule' && env.TIMBERART_AUTO_ADDITIONS_ARMED == 'true' && vars.TIMBERART_AUTO_ADDITIONS_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TIMBERART_AUTO_ADDITIONS_ENABLED: ${{ vars.TIMBERART_AUTO_ADDITIONS_ENABLED }}
+        run: python3 -B tools/drive_sync_additions.py --publish --evidence "$RUNNER_TEMP/drive-additions-evidence.json" --report "$RUNNER_TEMP/drive-sync-report.md"
 
       - name: Create or update the generated-data draft PR
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
@@ -128,3 +141,52 @@ jobs:
             data/motifs-manifest.json
             data/drive-sync-state.json
             assets/motifs/
+
+  publish-pages-additions:
+    # No output is produced while ARMED is false; manual runs can never publish.
+    needs: prepare
+    if: >-
+      ${{ github.event_name == 'schedule' &&
+          vars.TIMBERART_AUTO_ADDITIONS_ENABLED == 'true' &&
+          needs.prepare.outputs.published != '' &&
+          github.repository == 'heinzwilhelm84-WIL/timberart-design-vorschau' &&
+          github.repository_id == '1425353605' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pages: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERIFIED_DATA_COMMIT: ${{ needs.prepare.outputs.published }}
+    steps:
+      - name: Request Pages build only for the verified additions commit
+        run: |
+          python3 -B - <<'PYCODE'
+          import json, os, re, subprocess, time
+          def api(path, method='GET'):
+              result = subprocess.run(['gh','api','--method',method,path],capture_output=True)
+              if result.returncode:
+                  raise SystemExit('Pages request failed; no retry or configuration change.')
+              return json.loads(result.stdout)
+          repository = 'repos/heinzwilhelm84-WIL/timberart-design-vorschau'
+          expected = os.environ['VERIFIED_DATA_COMMIT']
+          if not re.fullmatch('[a-f0-9]{40}', expected):
+              raise SystemExit('Invalid verified commit.')
+          pages = api(repository + '/pages')
+          if pages.get('build_type') != 'legacy' or pages.get('source') != {'branch':'main','path':'/'}:
+              raise SystemExit('Pages configuration requires manual review; no changes made.')
+          if api(repository + '/git/ref/heads/main')['object']['sha'] != expected:
+              raise SystemExit('main advanced; Pages build refused.')
+          api(repository + '/pages/builds', 'POST')
+          for attempt in range(24):
+              build = api(repository + '/pages/builds/latest')
+              if build.get('commit') == expected and build.get('status') == 'built':
+                  print('Verified additions Pages build completed.')
+                  break
+              if build.get('status') == 'errored':
+                  raise SystemExit('Pages build failed; manual inspection required.')
+              time.sleep(10)
+          else:
+              raise SystemExit('Pages build not confirmed; manual inspection required.')
+          PYCODE

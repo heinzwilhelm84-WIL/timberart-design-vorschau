@@ -482,6 +482,29 @@ def synchronize(root, api, apply=False, bindings=None):
     return report
 
 
+def write_additions_evidence(report, root, destination):
+    """Private ephemeral scan evidence; never log or upload it to a public artifact."""
+    import subprocess
+    root = root.resolve()
+    if destination.resolve().is_relative_to(root) or report.get('mode') != 'prepare-pr':
+        raise SyncError('Scan evidence requires an outside-repository destination and a completed import.')
+    visible = set()
+    for key in ('newImages','unchangedImages','changedImages','metadataOnlyImages','verifiedExisting'):
+        visible.update(report[key])
+    missing = set(report['missingCategoriesRetained'])
+    result = subprocess.run(['git','rev-parse','HEAD'],cwd=root,capture_output=True,text=True)
+    base = result.stdout.strip()
+    if result.returncode or not re.fullmatch('[a-f0-9]{40}',base):
+        raise SyncError('Cannot bind scan evidence to a trusted base.')
+    evidence = {'version':1,'baseCommit':base,'createdAt':int(time.time()),
+                'runId':os.environ.get('GITHUB_RUN_ID','local'),'runAttempt':os.environ.get('GITHUB_RUN_ATTEMPT','local'),
+                'manifestSha256':images.digest((root/'data/motifs-manifest.json').read_bytes()),
+                'categoriesSha256':images.digest((root/'data/categories.json').read_bytes()),
+                'visibleMotifIds':sorted(visible),
+                'visibleCategoryIds':sorted(c['id'] for c in report['categoryBindings'] if c['id'] not in missing)}
+    images.atomic_write(destination,images.json_bytes(evidence))
+
+
 def write_report(report, destination):
     """Public output is a closed schema of fixed labels, status and aggregate counts."""
     text = '# Google-Drive-Abgleich\n\n'
@@ -509,15 +532,20 @@ def main():
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--apply', action='store_true', help='Prepare sanitized outputs; never push/merge/deploy')
     parser.add_argument('--category-bindings', type=Path, help='Private local-only first bindings JSON outside the repository')
+    parser.add_argument('--additions-evidence', type=Path, help='Private ephemeral scan evidence outside repository; never upload')
     parser.add_argument('--report', type=Path, required=True, help='Outside the repository, e.g. RUNNER_TEMP/report.md')
     args = parser.parse_args()
     try:
         if args.report.resolve().is_relative_to(args.repo.resolve()):
             raise SyncError('Report must be outside the repository.')
+        if args.additions_evidence and (not args.apply or args.additions_evidence.resolve().is_relative_to(args.repo.resolve()) or args.additions_evidence.resolve() == args.report.resolve()):
+            raise SyncError('Private scan evidence needs a separate outside-repository path and apply mode.')
         bindings = load_category_bindings(args.category_bindings, args.repo) if args.category_bindings else None
         api = DriveAPI(os.environ.get('TIMBERART_DRIVE_ACCESS_TOKEN'))
         report = synchronize(args.repo, api, args.apply, bindings)
         write_report(report, args.report)
+        if args.additions_evidence:
+            write_additions_evidence(report, args.repo, args.additions_evidence)
         print('Read-only Drive scan completed; report written outside the repository. No push or deployment.')
         return 0
     except Exception as error:
