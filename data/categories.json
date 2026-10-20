@@ -5,73 +5,82 @@
       "id": "legacy-303eda15ce086a3d",
       "key": "Alu-Kreditkarte",
       "name": "Alu-Kreditkarte",
-      "folderId": null,
+      "folderId": "1uOxlTIRaiiP9csRZQ4z005HMVOu9mt_M",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "Alu-Kreditkarte"
     },
     {
       "id": "legacy-e3f25af3751d68ed",
       "key": "Flaschenöffner-Aluminium-gross",
       "name": "Flaschenöffner-Aluminium-gross",
-      "folderId": null,
+      "folderId": "1Lm2crBCW18Ux9KHv_zJxz-gBqmsyfNW-",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "Flaschenöffner-Aluminium-gross"
     },
     {
       "id": "legacy-a792a813b8ed0708",
       "key": "Flaschenöffner-Aluminium-klein",
       "name": "Flaschenöffner-Aluminium-klein",
-      "folderId": null,
+      "folderId": "1eTQ24R-QTg-FniMexyiBfJtt9swIeYT6",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "Flaschenöffner-Aluminium-klein"
     },
     {
       "id": "legacy-75990e44621792df",
       "key": "Schmuck Design",
       "name": "Schmuck Design",
-      "folderId": null,
+      "folderId": "1zGS0F8qtl4wU8sqz7-W4J97dRtdD2EG9",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "Schmuck Design"
     },
     {
       "id": "legacy-11671eab1c5d56ce",
       "key": "Untersetzter ",
       "name": "Untersetzter ",
-      "folderId": null,
+      "folderId": "1XuUw-jSCGUsPNhBDhLekj9XIA53IQ1xA",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "Untersetzter "
     },
     {
       "id": "legacy-77f59f962cd4c641",
       "key": "Tiere Strichoptik",
       "name": "Tiere Strichoptik",
-      "folderId": null,
+      "folderId": "1MITGPFhYHee2Az3wEwUu-CW7er7f29oD",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "Tiere Strichoptik"
     },
     {
       "id": "legacy-58b4019fc79601d4",
       "key": "Flachmann Motive",
       "name": "Flachmann Motive",
-      "folderId": null,
+      "folderId": "1mv8B2DCiKZp3rjqgIGTZYnyEPrYcTxFR",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "Flachmann Motive"
     },
     {
       "id": "legacy-64e6b3a27ebd0a0a",
       "key": "CAP-Design",
       "name": "CAP-Design",
-      "folderId": null,
+      "folderId": "1P8Jpwx2_AiC_yk5bxGUkRx-L9YpbXHg8",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "CAP-Design"
     },
     {
       "id": "legacy-a505e5ad221779de",
       "key": "Sternzeichen",
       "name": "Sternzeichen",
-      "folderId": null,
+      "folderId": "1jsfrz4n3PTytbbo5PWavqzcD4GIUnh-C",
       "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
-      "parentId": null
+      "parentId": null,
+      "displayName": "Sternzeichen"
     }
   ]
 }
