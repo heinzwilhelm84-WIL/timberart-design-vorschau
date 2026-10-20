@@ -249,12 +249,84 @@ class AdditionsChecks(unittest.TestCase):
    with patch.object(sys,'argv',['sync','--repo',str(self.root),'--report',str(report),*args]),patch.object(sync,'DriveAPI') as api:
     self.assertEqual(sync.main(),1); api.assert_not_called()
    self.assertFalse(report.exists())
+ def test_dry_run_summary_separates_detected_eligible_and_existing_changes_without_writes(self):
+  data=blob('blue'); self.api.payloads['old']=data; self.api.tree['a'][0]=image('old','Private-existing.png',data)
+  self.api.tree['root'].append(folder('new-category','Private category')); self.api.tree['new-category']=[]; self.add('new-motif','new-category'); self.sync()
+  before=snapshot(self.root); status=self.git('status','--porcelain'); head=self.git('rev-parse','HEAD')
+  summary=additions.dry_run_summary(self.root,self.evidence)
+  for line in ['Neue Kategorien im Kandidaten: 1','Neue Motive im Kandidaten: 1','Automatisch zulaessige neue Kategorien: 1','Automatisch zulaessige neue Motive: 1','Zurueckgehaltene bestehende Motive: 1']:
+   self.assertIn(line,summary)
+  for private in ['Private','new-motif','new-category','legacy-fixed','Alt.png']: self.assertNotIn(private,summary)
+  self.assertEqual(snapshot(self.root),before); self.assertEqual(self.git('status','--porcelain'),status); self.assertEqual(self.git('rev-parse','HEAD'),head)
+ def test_dry_run_counts_missing_existing_and_unconfirmed_new_motifs(self):
+  self.add(); self.sync(); self.api.tree['a']=[]; self.sync()
+  summary=additions.dry_run_summary(self.root,self.evidence)
+  self.assertIn('Neue Motive im Kandidaten: 1',summary)
+  self.assertIn('Automatisch zulaessige neue Motive: 0',summary)
+  self.assertIn('Zurueckgehaltene bestehende Motive: 1',summary)
+  self.assertIn('Zurueckgehaltene neue Motive: 1',summary)
+ def test_dry_run_blocks_new_content_under_renamed_existing_parent(self):
+  self.api.tree['root'][0]['name']='Private renamed'
+  self.api.tree['a'].append(folder('new-category','Private child')); self.api.tree['new-category']=[]; self.add('new','new-category'); self.sync()
+  summary=additions.dry_run_summary(self.root,self.evidence)
+  for line in ['Neue Kategorien im Kandidaten: 1','Neue Motive im Kandidaten: 1','Automatisch zulaessige neue Kategorien: 0','Automatisch zulaessige neue Motive: 0','Zurueckgehaltene bestehende Kategorien: 1','Zurueckgehaltene neue Kategorien: 1','Zurueckgehaltene neue Motive: 1']:
+   self.assertIn(line,summary)
+ def test_dry_run_cli_cannot_publish_even_when_both_switches_are_enabled(self):
+  import contextlib
+  self.add(); self.sync(); report=pathlib.Path(self.temp.name)/'summary.md'; report.write_text('PRIVATE previous report')
+  output=pathlib.Path(self.temp.name)/'github-output'; before=snapshot(self.root)
+  args=['additions','--repo',str(self.root),'--dry-run-summary','--evidence',str(self.evidence),'--report',str(report)]
+  with patch.dict(os.environ,{**self.env(),'GITHUB_OUTPUT':str(output)},clear=True),patch.object(sys,'argv',args),patch.object(additions,'publish',side_effect=AssertionError('Never publish')) as publish,contextlib.redirect_stdout(io.StringIO()):
+   self.assertEqual(additions.main(),0); publish.assert_not_called()
+  self.assertFalse(output.exists()); self.assertNotIn('PRIVATE',report.read_text()); self.assertEqual(before,snapshot(self.root))
+  with patch.object(sys,'argv',args+['--publish']),contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit) as error:
+   additions.main()
+  self.assertEqual(error.exception.code,2)
+ def test_dry_run_stale_evidence_failure_emits_no_source_details_or_report(self):
+  import contextlib
+  self.add(); self.sync(); self.evidence.write_text('{}'); report=pathlib.Path(self.temp.name)/'summary.md'
+  out,err=io.StringIO(),io.StringIO()
+  args=['additions','--repo',str(self.root),'--dry-run-summary','--evidence',str(self.evidence),'--report',str(report)]
+  with patch.object(sys,'argv',args),contextlib.redirect_stdout(out),contextlib.redirect_stderr(err): self.assertEqual(additions.main(),1)
+  self.assertFalse(report.exists()); self.assertEqual(out.getvalue(),''); self.assertNotIn('old',err.getvalue()); self.assertNotIn('new',err.getvalue())
+ def test_dry_run_report_cannot_target_private_evidence(self):
+  import contextlib
+  before=self.evidence.read_bytes()
+  args=['additions','--repo',str(self.root),'--dry-run-summary','--evidence',str(self.evidence),'--report',str(self.evidence)]
+  with patch.object(sys,'argv',args),contextlib.redirect_stderr(io.StringIO()): self.assertEqual(additions.main(),1)
+  self.assertEqual(self.evidence.read_bytes(),before)
  def test_cli_reports_only_counts_and_generic_errors(self):
   self.add(); self.sync(); out,err=io.StringIO(),io.StringIO()
   import contextlib
   with patch.object(sys,'argv',['additions','--repo',str(self.root),'--evidence',str(self.evidence)]),contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):
    self.assertEqual(additions.main(),0)
   self.assertNotIn('Alt',out.getvalue()); self.assertNotIn('legacy-fixed',out.getvalue()); self.assertIn('newImages: 1',out.getvalue())
+
+
+class DryRunWorkflowChecks(unittest.TestCase):
+ def test_manual_dry_run_has_no_write_pr_publish_pages_or_artifact_path(self):
+  import yaml,shlex
+  workflow=yaml.load((ROOT/'.github/workflows/drive-motifs-sync.yml').read_text(),Loader=yaml.BaseLoader)
+  self.assertIn('dry-run',workflow['on']['workflow_dispatch']['inputs']['mode']['options'])
+  job=workflow['jobs']['dry-run']
+  self.assertEqual(job['permissions'],{'contents':'read','pull-requests':'read','id-token':'write'})
+  self.assertNotIn('outputs',job); self.assertNotIn('needs',job)
+  self.assertIn("github.event_name == 'workflow_dispatch'",job['if']); self.assertIn("inputs.mode == 'dry-run'",job['if'])
+  self.assertIn("github.ref == 'refs/heads/main'",job['if'])
+  for step in job['steps']:
+   self.assertNotIn('create-pull-request',step.get('uses','')); self.assertNotIn('upload-artifact',step.get('uses','')); self.assertNotIn('deploy',step.get('uses',''))
+   command=step.get('run',''); self.assertNotIn('--publish',shlex.split(command)); self.assertNotIn('git push',command); self.assertNotIn('pages/builds',command)
+   if 'uses' in step: self.assertRegex(step['uses'],r'@[a-f0-9]{40}$')
+  auth=next(step for step in job['steps'] if step.get('id')=='google-auth')
+  self.assertEqual(auth['with']['access_token_scopes'],'https://www.googleapis.com/auth/drive.readonly')
+  self.assertEqual(auth['with']['create_credentials_file'],'false'); self.assertEqual(auth['with']['export_environment_variables'],'false')
+  checkout=job['steps'][0]['with']; self.assertEqual(checkout['ref'],'${{ github.sha }}'); self.assertEqual(checkout['persist-credentials'],'false')
+  runs=[step.get('run','') for step in job['steps']]
+  self.assertTrue(any('drive_sync_guard.py --seed' in r for r in runs))
+  self.assertTrue(any('drive_sync.py --apply --additions-evidence' in r for r in runs))
+  self.assertTrue(any('drive_sync_additions.py --dry-run-summary' in r for r in runs))
+  self.assertEqual(runs[-1],'cat "$RUNNER_TEMP/drive-dry-run-summary.md" >> "$GITHUB_STEP_SUMMARY"')
+  self.assertEqual(workflow['jobs']['prepare']['env']['TIMBERART_AUTO_ADDITIONS_ARMED'],'false')
 
 
 class PagesWorkflowChecks(unittest.TestCase):

@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'inventory = metadata only; prepare-pr = read images and prepare a draft PR'
+        description: 'inventory = metadata; dry-run = import and classify without publication; prepare-pr = draft PR'
         required: true
         default: inventory
         type: choice
         options:
           - inventory
+          - dry-run
           - prepare-pr
   # GitHub cron uses UTC. Automatic additions remain disarmed below.
   schedule:
@@ -59,6 +60,53 @@ jobs:
         run: python3 -B tools/drive_sync.py --report "$RUNNER_TEMP/drive-sync-report.md"
       - name: Show sanitized inventory
         run: cat "$RUNNER_TEMP/drive-sync-report.md" >> "$GITHUB_STEP_SUMMARY"
+
+  dry-run:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dry-run' &&
+          github.repository == 'heinzwilhelm84-WIL/timberart-design-vorschau' &&
+          github.repository_id == '1425353605' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    steps:
+      - name: Checkout trusted main for an ephemeral dry-run
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the pinned free image library
+        run: python3 -m pip install --disable-pip-version-check -r tools/requirements-images.txt
+      - name: Read pending PR data without executing its code
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/drive_sync_guard.py --seed
+      - name: Authenticate with existing read-only WIF
+        id: google-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: banded-meridian-424821-j9
+          workload_identity_provider: projects/949832006175/locations/global/workloadIdentityPools/timberart-github-sync/providers/timberart-github-actions
+          service_account: timberart-drive-sync@banded-meridian-424821-j9.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive.readonly
+          access_token_lifetime: 3600s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Import only into the disposable runner working directory
+        env:
+          TIMBERART_DRIVE_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+        run: python3 -B tools/drive_sync.py --apply --additions-evidence "$RUNNER_TEMP/drive-dry-run-evidence.json" --report "$RUNNER_TEMP/drive-dry-run-import.md"
+      - name: Validate generated data and unchanged remote main
+        run: python3 -B tools/drive_sync_guard.py
+      - name: Validate additions separation without publication
+        run: python3 -B tools/drive_sync_additions.py --dry-run-summary --evidence "$RUNNER_TEMP/drive-dry-run-evidence.json" --report "$RUNNER_TEMP/drive-dry-run-summary.md"
+      - name: Show aggregate counts only
+        run: cat "$RUNNER_TEMP/drive-dry-run-summary.md" >> "$GITHUB_STEP_SUMMARY"
 
   prepare:
     if: >-
