@@ -45,7 +45,8 @@ with sync_playwright() as p:
   field('width',540);wide=metrics();assert wide['textHeight']<narrow['textHeight']
   assert model()['fontSize']==before['fontSize'] and model()['height']==before['height']
   old=model();field('fontSize',36);assert model()['width']==old['width'] and model()['height']==old['height']
-  assert metrics()['fontSize']=='36px' and 'scale' not in metrics()['transform']
+  assert 8 <= float(metrics()['fontSize'].removesuffix('px')) <= 36 and 'scale' not in metrics()['transform']
+  assert model()['fontSize']==36  # requested maximum remains independent
   old=model();field('width',0);assert model()==old
   assert float(page.locator('#frame-width').input_value())==old['width']
   assert 'wiederhergestellt' in page.locator('.frame-control-error').inner_text()
@@ -59,7 +60,7 @@ with sync_playwright() as p:
   for align in ['left','center','right']:
    page.locator('#frame-align').select_option(align);assert metrics()['align']==align and model()['align']==align
   # Long words wrap rather than expanding the frame.
-  field('width',160);page.locator('#wishText').fill('ABCDEFGHIJKLMNOPQRSTUVWXYZ'*8)
+  field('width',160);page.locator('#wishText').fill('ABCDEFGHIJKLMNOPQRSTUVWXYZ'*100)
   assert metrics()['innerWidth']==136 and metrics()['textHeight']>100
   assert page.locator('.frame-warning').is_visible()
   field('width',420);field('height',140);field('fontSize',32);field('y',480)

@@ -1,5 +1,5 @@
 /* UI layer: font definitions and design UI are retained; preview catalog and test handlers live in index.html. */
-const studio = { view: 'home', category: 'all', catalog: [], categories: [], ready: false, loading: null, query: '', request: 0, returnFocus: null };
+const studio = { view: 'home', category: 'all', catalog: [], categories: [], ready: false, catalogUnavailable: false, loading: null, query: '', request: 0, returnFocus: null };
 const CATEGORY_STYLE = {
     'Alu-Kreditkarte': ['Alu-Kreditkarten', 'Kleine Karte. Grosse Botschaft.', '#f1e9f6'],
     'CAP-Design': ['Cap-Designs', 'Ein Statement für deinen Look.', '#e8eee5'],
@@ -42,7 +42,8 @@ async function initStudio() {
     try { loadFavorites(); } catch (e) { favorites = []; }
     if (!Array.isArray(favorites)) favorites = [];
     studioNavigation(); studioHome(); loadLogo();
-    studio.loading = Promise.all([loadAllDesigns(), studioLoadCategories()]).then(() => {
+    studio.loading = Promise.all([loadAllDesigns(), studioLoadCategories()]).then(([catalogLoaded]) => {
+        studio.catalogUnavailable = !catalogLoaded;
         studio.catalog = [...allDesigns];
         allCategories = [...new Set([...studio.categories.map(c => c.key), ...studio.catalog.map(d => d.category)])].sort((a,b) => studioLabel(a).localeCompare(studioLabel(b), 'de'));
         studio.ready = true;
@@ -71,7 +72,7 @@ function studioHome() {
         </section>
         <div class="studio-strip"><span>${studioIcon('image')} <strong>${studio.ready?studio.catalog.length:'…'} Motive</strong> zum Entdecken</span><span>${studioIcon('spark')} <strong>30 Schriften</strong> für deine Worte</span><span>${studioIcon('gift')} <strong>${studio.ready?groups.length:'…'} Kategorien</strong> voller Ideen</span></div>
         <section class="section-wrap" id="categories" aria-labelledby="categoriesTitle"><div class="section-heading"><div><div class="eyebrow">Was möchtest du gestalten?</div><h2 id="categoriesTitle">Was passt zu deiner Idee?</h2><p>Entdecke unsere Motivwelten und finde deinen Ausgangspunkt.</p></div><button class="text-link" onclick="studioNavigate('motifs')">Alle Motive ansehen ${studioIcon('arrow')}</button></div>
-        ${groups.length?`<div class="category-grid">${groups.map(({cat,designs},i)=>`<article class="category-card"><button class="category-open" data-category="${studioEscape(cat)}"><div class="category-picture"><span class="category-number">MOTIVWELT ${String(i+1).padStart(2,'0')}</span>${designs.length ? motifImageTag(designs[0], {alt:studioLabel(cat)}) : studioIcon('image')}</div><div class="category-info"><div><h3>${studioEscape(studioLabel(cat))}</h3><p>${designs.length} Motive entdecken</p></div><span class="round-arrow">${studioIcon('arrow')}</span></div></button></article>`).join('')}</div>`:studio.ready?studioEmpty('Die Motive sind gerade nicht erreichbar.','Bitte prüfe die Verbindung und versuche es erneut.','Erneut laden',"location.reload()"):'<div class="loading" role="status"><span class="spinner"></span>Deine Geschenkideen werden geladen …</div>'}
+        ${studio.catalogUnavailable?studioCatalogError():''}${groups.length?`<div class="category-grid">${groups.map(({cat,designs},i)=>`<article class="category-card"><button class="category-open" data-category="${studioEscape(cat)}"><div class="category-picture"><span class="category-number">MOTIVWELT ${String(i+1).padStart(2,'0')}</span>${designs.length ? motifImageTag(designs[0], {alt:studioLabel(cat)}) : studioIcon('image')}</div><div class="category-info"><div><h3>${studioEscape(studioLabel(cat))}</h3><p>${designs.length} Motive entdecken</p></div><span class="round-arrow">${studioIcon('arrow')}</span></div></button></article>`).join('')}</div>`:studio.ready?studioEmpty('Die Motive sind gerade nicht erreichbar.','Bitte prüfe die Verbindung und versuche es erneut.','Erneut laden',"location.reload()"):'<div class="loading" role="status"><span class="spinner"></span>Deine Geschenkideen werden geladen …</div>'}
         <div class="font-banner"><div class="type-art" aria-hidden="true">Aa</div><div><div class="eyebrow">Worte mit Persönlichkeit</div><h2>Dein Text. Dein Stil.</h2><p>Elegant, verspielt oder ganz klar: Finde deine Lieblingsschrift.</p></div><button class="action" onclick="studioNavigate('schriften')">Zum Schriftatelier ${studioIcon('arrow')}</button></div></section>`;
     document.querySelectorAll('.category-open').forEach(btn=>btn.addEventListener('click',()=>studioNavigate('motifs',btn.dataset.category)));
 }
@@ -97,6 +98,9 @@ async function studioNavigate(view, category='all') {
     window.scrollTo({top:0,behavior:'instant'});
     document.getElementById('content').focus({preventScroll:true});
 }
+function studioCatalogError() {
+    return studioEmpty('Der Motivkatalog ist gerade nicht erreichbar.', 'Deine gespeicherten Entwürfe bleiben erhalten. Bitte Verbindung prüfen und erneut laden.', 'Erneut laden', 'location.reload()');
+}
 function studioEmpty(title, description, action='Motive entdecken', handler="studioNavigate('motifs')") {
     return `<div class="empty-state">${studioIcon('heart')}<h2>${studioEscape(title)}</h2><p>${studioEscape(description)}</p><button class="action primary" onclick="${handler}">${action} ${studioIcon('arrow')}</button></div>`;
 }
@@ -115,7 +119,7 @@ function studioResults() {
     document.querySelector('.page-heading h1').textContent=studio.view==='favorites'?'Deine Lieblingsideen':studio.category==='all'?'Finde dein Lieblingsmotiv':studioLabel(studio.category);
     document.querySelector('.heading-count').textContent=`${list.length} ${studio.view==='favorites'?'gemerkt':list.length===1?'Motiv':'Motive'}`;
     document.getElementById('resultCount').textContent=`${list.length} ${list.length===1?'Motiv':'Motive'}`;
-    document.getElementById('motifResults').innerHTML=list.length?`<div class="grid-5">${list.map(studioDesignCard).join('')}</div>`:studio.view==='favorites'&&!favorites.length?studioEmpty('Hier ist Platz für deine Lieblingsideen.','Tippe bei einem Motiv auf das Herz. Deine Favoriten bleiben auf diesem Gerät gespeichert.'):studioEmpty('Noch kein passendes Motiv dabei?','Versuche einen anderen Suchbegriff oder wähle eine andere Kategorie.','Alle Motive zeigen',"studioNavigate('motifs')");
+    document.getElementById('motifResults').innerHTML=studio.catalogUnavailable?studioCatalogError():list.length?`<div class="grid-5">${list.map(studioDesignCard).join('')}</div>`:studio.view==='favorites'&&!favorites.length?studioEmpty('Hier ist Platz für deine Lieblingsideen.','Tippe bei einem Motiv auf das Herz. Deine Favoriten bleiben auf diesem Gerät gespeichert.'):studioEmpty('Noch kein passendes Motiv dabei?','Versuche einen anderen Suchbegriff oder wähle eine andere Kategorie.','Alle Motive zeigen',"studioNavigate('motifs')");
     studioBindCards();
 }
 function studioDesignCard(d) {
@@ -125,7 +129,7 @@ function studioDesignCard(d) {
 function studioBindCards() {
     document.querySelectorAll('[data-design]').forEach(btn=>btn.addEventListener('click',()=>{const d=studio.catalog.find(d=>d.id===btn.dataset.design);studio.returnFocus=btn;openImageModal(d.id,d.name,d.category);studioPrepareDialog('imageModal');}));
     document.querySelectorAll('[data-favorite]').forEach(btn=>btn.addEventListener('click',e=>{
-        toggleFavorite(e,btn.dataset.favorite);const pressed=favorites.includes(btn.dataset.favorite);btn.setAttribute('aria-pressed',String(pressed));btn.setAttribute('aria-label',`${pressed?'Aus Favoriten entfernen':'Als Favorit merken'}: ${btn.closest('article').querySelector('.name').textContent}`);studioNavigation();
+        if (!toggleFavorite(e,btn.dataset.favorite)) return;const pressed=favorites.includes(btn.dataset.favorite);btn.setAttribute('aria-pressed',String(pressed));btn.setAttribute('aria-label',`${pressed?'Aus Favoriten entfernen':'Als Favorit merken'}: ${btn.closest('article').querySelector('.name').textContent}`);studioNavigation();
         if(studio.view==='favorites'){const index=[...document.querySelectorAll('[data-favorite]')].indexOf(btn);studioResults();const remaining=document.querySelectorAll('[data-favorite]');(remaining[Math.min(index,remaining.length-1)]||document.getElementById('motifSearch')).focus();}
     }));
     document.querySelectorAll('.design-open img').forEach(img=>img.addEventListener('error',()=>{
