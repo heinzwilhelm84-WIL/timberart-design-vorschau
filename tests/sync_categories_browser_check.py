@@ -18,7 +18,7 @@ with sync_playwright() as p:
   ctx.route('**/data/categories.json',lambda r:r.fulfill(json={'version':1,'categories':categories['categories']+[extra]}))
   page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(URL);page.wait_for_function('() => studio.ready')
-  assert page.locator('[data-category]').count()==10
+  assert page.locator('[data-category]').count()==len(categories['categories'])+1
   card=page.locator('[data-category="drive-new-folder"]');assert malicious in card.inner_text()
   card.click();assert page.locator('[data-design]').count()==0
   assert page.locator('#categorySelect').input_value()=='drive-new-folder'

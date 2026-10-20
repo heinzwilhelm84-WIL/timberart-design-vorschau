@@ -363,7 +363,7 @@ class APIAndWorkflowChecks(unittest.TestCase):
    def open(self,*args,**kwargs):return Response(self.data)
   for data in [{'files':[],'incompleteSearch':True},{'files':[],'nextPageToken':'same'}]:
    with self.assertRaises(sync.SyncError):list(sync.DriveAPI('OFFLINE-ONLY',Opener(data)).children('root'))
- def test_workflow_hourly_timer_has_no_deploy_or_artifacts_and_scopes_are_separated(self):
+ def test_workflow_hourly_timer_disarms_publication_and_scopes_are_separated(self):
   import yaml
   w=yaml.load((ROOT/'.github/workflows/drive-motifs-sync.yml').read_text(),Loader=yaml.BaseLoader)
   self.assertEqual(set(w['on']),{'workflow_dispatch','schedule'});self.assertEqual(w['permissions'],{})
@@ -377,19 +377,28 @@ class APIAndWorkflowChecks(unittest.TestCase):
     if 'uses' in step:self.assertRegex(step['uses'],r'@[a-f0-9]{40}$')
   pr=w['jobs']['prepare']['steps'][-1];self.assertEqual(pr['with']['base'],'main');self.assertEqual(pr['with']['branch'],'bot/drive-motifs-sync');self.assertEqual(pr['with']['draft'],'always-true')
   self.assertEqual(w['jobs']['prepare']['permissions'],{'contents':'write','pull-requests':'write','id-token':'write'})
+  self.assertEqual(w['jobs']['prepare']['env']['TIMBERART_AUTO_ADDITIONS_ARMED'],'false')
+  self.assertEqual(w['jobs']['publish-pages-additions']['permissions'],{'contents':'read','pages':'write'})
+  publish=next(step for step in w['jobs']['prepare']['steps'] if step.get('id')=='auto-additions')
+  self.assertIn("env.TIMBERART_AUTO_ADDITIONS_ARMED == 'true'",publish['if'])
+  self.assertIn("vars.TIMBERART_AUTO_ADDITIONS_ENABLED == 'true'",publish['if'])
+  self.assertIn("github.event_name == 'schedule'",publish['if'])
   self.assertEqual(pr['with']['add-paths'].split(),['catalog.json','data/categories.json','data/motifs-manifest.json','data/drive-sync-state.json','assets/motifs/'])
  def test_workflow_event_matrix_keeps_inventory_manual_and_schedule_on_trusted_main(self):
   import yaml,re
   w=yaml.load((ROOT/'.github/workflows/drive-motifs-sync.yml').read_text(),Loader=yaml.BaseLoader)
-  def jobs(event,mode=None,repo=guard.REPOSITORY,ref='refs/heads/main',repo_id='1425353605'):
-   values={'github.event_name':event,'inputs.mode':mode,'github.repository':repo,'github.ref':ref,'github.repository_id':repo_id}
+  def jobs(event,mode=None,repo=guard.REPOSITORY,ref='refs/heads/main',repo_id='1425353605',enabled='',published=''):
+   values={'github.event_name':event,'inputs.mode':mode,'github.repository':repo,'github.ref':ref,'github.repository_id':repo_id,'vars.TIMBERART_AUTO_ADDITIONS_ENABLED':enabled,'needs.prepare.outputs.published':published}
    selected=[]
    for name,job in w['jobs'].items():
     expression=job['if'].strip().removeprefix('${{').removesuffix('}}').strip().replace('&&',' and ').replace('||',' or ')
-    expression=re.sub(r'\b(?:github|inputs)\.[a-z_]+\b',lambda m:repr(values[m[0]]),expression)
+    expression=re.sub(r'\b(?:needs\.prepare\.outputs\.published|(?:github|inputs|vars)\.[a-zA-Z_]+)\b',lambda m:repr(values[m[0]]),expression)
     if eval('('+expression+')',{'__builtins__':{}},{}):selected.append(name)
    return selected
   self.assertEqual(jobs('schedule'),['prepare'])
+  self.assertEqual(jobs('schedule',enabled='true'),['prepare'])
+  self.assertEqual(jobs('schedule',enabled='true',published='a'*40),['prepare','publish-pages-additions'])
+  self.assertEqual(jobs('workflow_dispatch','prepare-pr',enabled='true',published='a'*40),['prepare'])
   self.assertEqual(jobs('workflow_dispatch','inventory'),['inventory'])
   self.assertEqual(jobs('workflow_dispatch','prepare-pr'),['prepare'])
   self.assertEqual(jobs('workflow_dispatch'),[])
