@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-20T08:10:44.986906+00:00",
+  "generatedAt": "2026-10-20T13:13:06.095309+00:00",
   "generator": {
     "version": 1,
     "edges": [
@@ -22542,13 +22542,13 @@
         "modifiedTime": "2026-09-03T08:28:32.000Z",
         "md5Checksum": "3e26a1a687086116d410261ba2e6f326",
         "size": "564954",
-        "version": "4",
+        "version": "5",
         "mimeType": "image/jpeg",
         "folderIds": [
           "1P8Jpwx2_AiC_yk5bxGUkRx-L9YpbXHg8"
         ]
       },
-      "sourceFingerprint": "fb7be833c595d7b8544834bba8614057010f8d65811456b0ff84ab530d29167d",
+      "sourceFingerprint": "88ea2cfc038fb90dd44af44981e87d88eed7804a5c6c5544e0b420d906060049",
       "previewSource": {
         "kind": "Authenticated read-only raster source; never published",
         "sha256": "d97bed0f24076cad1e85168984fd5e2b31732e1e47482ff836428e4ca8ad2c6c",
@@ -27606,6 +27606,207 @@
       "categoryId": "legacy-a505e5ad221779de",
       "syncVersion": 1,
       "originalFingerprint": "md5:7a92c50144a08d0c3e050451806199c7",
+      "generator": {
+        "version": 1,
+        "edges": [
+          600,
+          1600
+        ],
+        "format": "WebP",
+        "lossless": true,
+        "method": 4,
+        "exact": true,
+        "resampling": "RGB/RGBA before LANCZOS",
+        "pillow": "12.3.0",
+        "libwebp": "1.6.0"
+      }
+    },
+    {
+      "id": "1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X",
+      "name": "Breite Schwarzweißgravur des Säntis-Massivs",
+      "category": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+      "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+      "source": {
+        "provider": "google-drive",
+        "fileId": "1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X",
+        "originalUrl": "https://drive.google.com/file/d/1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X/view",
+        "originalFilename": "Breite Schwarzweißgravur des Säntis-Massivs.png",
+        "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
+        "modifiedTime": "2026-10-20T10:00:26.484Z",
+        "md5Checksum": "d28d455130a523f5fc472581f637d669",
+        "size": "2175938",
+        "version": "2",
+        "mimeType": "image/png",
+        "folderIds": [
+          "1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
+        ]
+      },
+      "sourceFingerprint": "3df9028e12af052a121977a741fff9bc503dcf1d10f232e26791b9318410d485",
+      "variants": {
+        "600": {
+          "path": "assets/motifs/1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X/600-45c0b3187ba070f6.webp",
+          "width": 600,
+          "height": 278,
+          "bytes": 149366,
+          "sha256": "45c0b3187ba070f6e82763c32c4ae972a60ae2856e5688ee0ecc3543d0d07403",
+          "pixelSha256": "78b2d53484cd2586715d2d677d58e0b48b1d3f5c3285fd1719cc48852cd453ac",
+          "losslessVerified": true
+        },
+        "1600": {
+          "path": "assets/motifs/1LCQIFwREKHXs87ztm-jWz8UBMbpwCS0X/1600-372bdf9174ffbc7f.webp",
+          "width": 1600,
+          "height": 742,
+          "bytes": 1053680,
+          "sha256": "372bdf9174ffbc7f460e4d53584771a883a4ba060a7aae37fbb1b05dc07a4d77",
+          "pixelSha256": "793507e37010629f6d830f10df7caf363913297f2d5ac37597da46299556c895",
+          "losslessVerified": true
+        }
+      },
+      "syncVersion": 1,
+      "originalFingerprint": "md5:d28d455130a523f5fc472581f637d669",
+      "previewSource": {
+        "kind": "Authenticated read-only raster source; never published",
+        "sha256": "f8e91387bdffd2d6b7013b293d81657199fa177b2a2819cdc45d35ea7dc259cf",
+        "bytes": 2175938,
+        "mimeType": "image/png",
+        "format": "PNG",
+        "width": 1842,
+        "height": 854
+      },
+      "generator": {
+        "version": 1,
+        "edges": [
+          600,
+          1600
+        ],
+        "format": "WebP",
+        "lossless": true,
+        "method": 4,
+        "exact": true,
+        "resampling": "RGB/RGBA before LANCZOS",
+        "pillow": "12.3.0",
+        "libwebp": "1.6.0"
+      }
+    },
+    {
+      "id": "1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib",
+      "name": "Hoher Kasten und Kamor im Linolschnitt",
+      "category": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+      "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+      "source": {
+        "provider": "google-drive",
+        "fileId": "1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib",
+        "originalUrl": "https://drive.google.com/file/d/1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib/view",
+        "originalFilename": "Hoher Kasten und Kamor im Linolschnitt.png",
+        "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
+        "modifiedTime": "2026-10-20T10:00:36.954Z",
+        "md5Checksum": "f7004dd66e1f139348f11b46c5c6d886",
+        "size": "1601341",
+        "version": "2",
+        "mimeType": "image/png",
+        "folderIds": [
+          "1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
+        ]
+      },
+      "sourceFingerprint": "9667e8cb541041c9d5730f158bdec9d072aa68b32ef1b16910cde9cce4db958a",
+      "variants": {
+        "600": {
+          "path": "assets/motifs/1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib/600-c224548ae7b7476d.webp",
+          "width": 600,
+          "height": 200,
+          "bytes": 87346,
+          "sha256": "c224548ae7b7476da970a81f591e37f4d5204b6e37857112b83d8d88831eb2e7",
+          "pixelSha256": "28ff6ed5a2a6777aacddba4cedb32482a3c39c4b6f9db5315c2b3ca28b8ef37a",
+          "losslessVerified": true
+        },
+        "1600": {
+          "path": "assets/motifs/1slJmrEZ-ZDQyiplgP99lHTNP6iM8c_Ib/1600-fa83ec58fb021e00.webp",
+          "width": 1600,
+          "height": 535,
+          "bytes": 580536,
+          "sha256": "fa83ec58fb021e003eaab88e11dfb80adf11397031b0dc4a27215b2e41f06ee0",
+          "pixelSha256": "ef3fe07f11c3fa1d1ce15059d691419840180db80704c450ca043bc830cb9755",
+          "losslessVerified": true
+        }
+      },
+      "syncVersion": 1,
+      "originalFingerprint": "md5:f7004dd66e1f139348f11b46c5c6d886",
+      "previewSource": {
+        "kind": "Authenticated read-only raster source; never published",
+        "sha256": "b8d0696124bc4e1fafe5a88adf9c3bd21a9e52ace3061339650399535ccfb28a",
+        "bytes": 1601341,
+        "mimeType": "image/png",
+        "format": "PNG",
+        "width": 2170,
+        "height": 725
+      },
+      "generator": {
+        "version": 1,
+        "edges": [
+          600,
+          1600
+        ],
+        "format": "WebP",
+        "lossless": true,
+        "method": 4,
+        "exact": true,
+        "resampling": "RGB/RGBA before LANCZOS",
+        "pillow": "12.3.0",
+        "libwebp": "1.6.0"
+      }
+    },
+    {
+      "id": "1dedfjqbbgf9pCuuLci5vrSMB19O38uD-",
+      "name": "Kreuzberge und Saxerlücke als Panoramagravur",
+      "category": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+      "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+      "source": {
+        "provider": "google-drive",
+        "fileId": "1dedfjqbbgf9pCuuLci5vrSMB19O38uD-",
+        "originalUrl": "https://drive.google.com/file/d/1dedfjqbbgf9pCuuLci5vrSMB19O38uD-/view",
+        "originalFilename": "Kreuzberge und Saxerlücke als Panoramagravur.png",
+        "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
+        "modifiedTime": "2026-10-20T10:01:14.941Z",
+        "md5Checksum": "3ef4abf38c27e23b648cb618d40b39d5",
+        "size": "2502964",
+        "version": "2",
+        "mimeType": "image/png",
+        "folderIds": [
+          "1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
+        ]
+      },
+      "sourceFingerprint": "a46930b715540504fae9c912ef3d28061c588f415bd78c4695e08b67270b6688",
+      "variants": {
+        "600": {
+          "path": "assets/motifs/1dedfjqbbgf9pCuuLci5vrSMB19O38uD-/600-8139f10a17b56c2f.webp",
+          "width": 600,
+          "height": 200,
+          "bytes": 115696,
+          "sha256": "8139f10a17b56c2f416ee2cabbb3a33cf3e0deafa918937bf90f79425021ac22",
+          "pixelSha256": "8c3bdb068903ccde5dcc5c9626a1556f5c19dbc321f6a87b7800a52174c3faf1",
+          "losslessVerified": true
+        },
+        "1600": {
+          "path": "assets/motifs/1dedfjqbbgf9pCuuLci5vrSMB19O38uD-/1600-0218a56e4e01d317.webp",
+          "width": 1600,
+          "height": 533,
+          "bytes": 840148,
+          "sha256": "0218a56e4e01d317236def60067c226e4a9fd44590012699b2a89a9d7c50dc1e",
+          "pixelSha256": "3a2fbe7d27d82973ae91992899d6f1d9ff0eda63a9b221a8c1fb7673d7acfcae",
+          "losslessVerified": true
+        }
+      },
+      "syncVersion": 1,
+      "originalFingerprint": "md5:3ef4abf38c27e23b648cb618d40b39d5",
+      "previewSource": {
+        "kind": "Authenticated read-only raster source; never published",
+        "sha256": "9856df3548c48cd2814f800d170c2de9fa499302e7302fcf7b1c0c8c1c81370e",
+        "bytes": 2502964,
+        "mimeType": "image/png",
+        "format": "PNG",
+        "width": 2172,
+        "height": 724
+      },
       "generator": {
         "version": 1,
         "edges": [
