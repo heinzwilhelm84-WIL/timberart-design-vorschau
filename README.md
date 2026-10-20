@@ -16,6 +16,12 @@ Lokal ansehen: `python3 -m http.server 8000`, dann http://localhost:8000 öffnen
 
 ## Personalisierung und Designmappe
 
+Lokale Weiterentwicklung auf `feature/textmodell-v3`: Neue Entwürfe mit unabhängig
+einstellbarer Rahmenbreite/-höhe, Schriftgrösse und Textausrichtung. Acht Eck-/
+Seitengriffe erlauben die direkte Rahmenänderung mit Maus und Finger, auch gedreht. Alte Layouts
+bleiben lesbar und werden nicht automatisch migriert. Noch kein Push/Deployment.
+Bedienung, Speicherversionen, Grenzen und Prüfbericht: [docs/text-model-v3.md](docs/text-model-v3.md).
+
 Auf Branch `feature/personalisierung-designmappe`: Motiv öffnen und
 „Personalisieren“ wählen, oder im Schriftatelier „Mit Motiv kombinieren“.
 Wunschtext und eine der 30 Schriften kombinieren, lokal speichern, bearbeiten,

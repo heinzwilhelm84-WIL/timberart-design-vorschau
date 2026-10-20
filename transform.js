@@ -95,6 +95,7 @@ function transformFit(surface) {
     if (surface.designWidth && surface.designWidth !== surface.clientWidth) surface.dispatchEvent(new Event('designresize'));
     surface.designWidth = surface.clientWidth;
     surface.querySelector('.design-plane').style.transform = `scale(${surface.clientWidth / DESIGN_SIZE})`;
+    if (surface.closest('.frame-v3')) { frameSync(surface); return; }
     if (surface.classList.contains('design-editable')) transformSync();
 }
 function transformUnmount() {
@@ -110,13 +111,15 @@ function transformMount() {
     document.querySelectorAll('.design-surface').forEach(surface => {
         if (!mountedSurfaces.has(surface)) {
             mountedSurfaces.add(surface); surfaceObserver.observe(surface);
-            if (surface.classList.contains('design-editable')) transformBind(surface);
+            if (surface.classList.contains('design-editable')) {
+                if (surface.closest('.frame-v3')) frameBind(surface); else transformBind(surface);
+            }
         }
         transformFit(surface);
     });
 }
 function transformSet(value) {
-    if (!personal.current || studio.view !== 'editor') return;
+    if (!personal.current || personal.current.layoutVersion !== 2 || studio.view !== 'editor') return;
     personal.current.transform = textTransform(value);
     personal.current.layoutVersion = 2;
     personal.dirty = true;
@@ -125,6 +128,7 @@ function transformSet(value) {
 function transformSync() {
     const surface = document.getElementById('designSurface');
     if (!surface || !personal.current) return;
+    if (personal.current.layoutVersion === 3) { frameSync(surface); return; }
     const t = textTransform(personal.current.transform);
     const object = surface.querySelector('.design-text-object');
     object.style.left = `${t.x * DESIGN_SIZE}px`;

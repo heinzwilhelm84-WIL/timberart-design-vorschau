@@ -38,6 +38,8 @@ with sync_playwright() as p:
    assert (background!='none')==expected
    assert (border!='rgba(0, 0, 0, 0)')==expected
   page.goto(URL);ready();page.locator('[data-view="motifs"]').click();page.locator('[data-design]').first.click();page.get_by_role('button',name='Personalisieren',exact=True).click()
+  # Keep this regression suite on the existing v2 selection/scale controller.
+  page.evaluate("() => {personal.current.layoutVersion=2;personal.current.transform=textTransform();delete personal.current.textFrame;personalEditor()}")
   page.locator('#wishText').fill('Für Anna\nVon Herzen');selected(False)
   initial=model()
   for _ in range(3):

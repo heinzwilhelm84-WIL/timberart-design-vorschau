@@ -1,6 +1,6 @@
 /* Local-only personalisation. No order or customer data leaves this browser. */
 const MAP_KEY = 'timberart-designmappe-v1';
-const personal = { drafts: [], current: null, dirty: false, picking: false, compare: [], blocked: false, epoch: '', message: '' };
+const personal = { drafts: [], current: null, dirty: false, picking: false, compare: [], blocked: false, epoch: '', message: '', storageVersion: 1 };
 const fontId = font => font.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const personalFont = id => FONTS.find(font => fontId(font) === id) || FONTS[0];
 function mapRead() {
@@ -8,11 +8,12 @@ function mapRead() {
         const raw = localStorage.getItem(MAP_KEY);
         if (!raw) { personal.epoch = crypto.randomUUID(); return; }
         const data = JSON.parse(raw);
-        if (data.version !== 1 || !Array.isArray(data.drafts) || typeof data.epoch !== 'string') throw Error();
+        if (![1, 2].includes(data.version) || !Array.isArray(data.drafts) || typeof data.epoch !== 'string') throw Error();
         const ids = new Set();
         for (const d of data.drafts) {
             if (!d || typeof d.id !== 'string' || ids.has(d.id) || typeof d.motifId !== 'string' || typeof d.text !== 'string' || !FONTS.some(f => fontId(f) === d.fontId) || typeof d.createdAt !== 'string' || typeof d.updatedAt !== 'string') throw Error();
-            if (d.layoutVersion != null && ![1, 2].includes(d.layoutVersion)) throw Error();
+            if (d.layoutVersion != null && ![1, 2, 3].includes(d.layoutVersion)) throw Error();
+            if (d.layoutVersion === 3 && (data.version !== 2 || !validTextFrame(d.textFrame) || 'transform' in d)) throw Error();
             if (d.layoutVersion === 2) {
                 if (!d.transform || !['x', 'y', 'scale', 'rotation'].every(key => typeof d.transform[key] === 'number' && Number.isFinite(d.transform[key]))) throw Error();
                 d.transform = textTransform(d.transform);
@@ -21,6 +22,7 @@ function mapRead() {
         }
         personal.drafts = data.drafts;
         personal.epoch = data.epoch;
+        personal.storageVersion = data.version;
     } catch (_) {
         personal.blocked = true;
         personal.message = 'Die lokale Designmappe kann nicht gelesen werden. Vorhandene Daten werden nicht überschrieben. Starte bei Bedarf nach Bestätigung eine neue Beratung.';
@@ -32,10 +34,12 @@ function mapWrite(drafts) {
         // Read before write so an older open tab cannot silently overwrite another consultation.
         const raw = localStorage.getItem(MAP_KEY);
         if (raw !== personal.lastRaw) throw Error('changed');
-        const value = JSON.stringify({ version: 1, epoch: personal.epoch, drafts });
+        const version = drafts.some(d => d.layoutVersion === 3) ? 2 : personal.storageVersion;
+        const value = JSON.stringify({ version, epoch: personal.epoch, drafts });
         localStorage.setItem(MAP_KEY, value);
         personal.lastRaw = value;
         personal.drafts = drafts;
+        personal.storageVersion = version;
         return true;
     } catch (_) {
         personalNotice('Nicht gespeichert: Der Browserspeicher ist voll, gesperrt oder wurde in einem anderen Fenster verändert. Dein aktueller Entwurf bleibt geöffnet.');
@@ -55,7 +59,7 @@ function personalLeave(view) {
 }
 function personalStart(motifId, seed) {
     if (personal.current && !personal.picking && personal.dirty && !confirm('Aktuellen ungespeicherten Entwurf verwerfen?')) return;
-    const current = personal.picking && personal.current ? personal.current : { id: null, text: seed?.text || '', fontId: seed?.fontId || fontId(FONTS[0]), layoutVersion: 2, transform: textTransform() };
+    const current = personal.picking && personal.current ? personal.current : { id: null, text: seed?.text || '', fontId: seed?.fontId || fontId(FONTS[0]), layoutVersion: 3, textFrame: copyTextFrame() };
     personal.current = { ...current, motifId: motifId || '' };
     personal.picking = false;
     personal.dirty = true;
@@ -72,6 +76,7 @@ function personalPick() {
     personalNotice('Wähle ein Motiv, öffne es und tippe auf „Personalisieren“. Dein Text und deine Schrift bleiben erhalten.');
 }
 function personalPreview(d, full = false, editable = false) {
+    if (d.layoutVersion === 3) return framePreview(d, full, editable);
     if (d.layoutVersion === 2) return transformPreview(d, full, editable);
     const motif = studio.catalog.find(m => m.id === d.motifId);
     const font = personalFont(d.fontId);
@@ -82,31 +87,30 @@ function personalImages() {
     document.querySelectorAll('.composition img').forEach(img => img.addEventListener('error', () => { img.hidden = true; img.nextElementSibling.hidden = false; }, { once: true }));
 }
 function personalEditor() {
-    if (!personal.current) { personal.current = { id: null, motifId: '', text: '', fontId: fontId(FONTS[0]), layoutVersion: 2, transform: textTransform() }; }
-    const upgraded = personal.current.layoutVersion !== 2;
-    personal.current.layoutVersion = 2;
-    personal.current.transform = textTransform(personal.current.transform);
-    if (upgraded) personal.dirty = true;
+    if (!personal.current) { personal.current = { id: null, motifId: '', text: '', fontId: fontId(FONTS[0]), layoutVersion: 3, textFrame: copyTextFrame() }; }
+    if (personal.current.layoutVersion === 2) personal.current.transform = textTransform(personal.current.transform);
     personal.picking = false;
     studioNavigation();
     const d = personal.current;
     const motif = studio.catalog.find(m => m.id === d.motifId);
-    document.getElementById('content').innerHTML = `<section class="page-wrap personal-page"><div class="eyebrow">Dein persönlicher Entwurf</div><h1>Mach es zu deinem Geschenk.</h1><ol class="personal-steps"><li>1 · Motiv wählen</li><li>2 · Text & Schrift</li><li>3 · In der Mappe speichern</li></ol><div class="personal-layout"><div><div id="compositionPreview">${personalPreview(d, true, true)}</div>${transformControls()}<p class="personal-caption">Gestaltungsvorschau · keine massstabsgetreue Gravurvorlage</p><p id="fontStatus" role="status"></p></div><div class="personal-controls"><h2>Deine Gestaltung</h2><p>${motif ? studioEscape(studioPrettyName(motif.name)) + ' · ' + studioEscape(studioLabel(motif.category)) : 'Noch kein Motiv ausgewählt'}</p><button class="action" id="chooseMotif">${motif ? 'Motiv wechseln' : 'Motiv auswählen'}</button><label for="wishText">Dein Wunschtext</label><textarea id="wishText" rows="4" aria-describedby="textAdvice" placeholder="Zum Beispiel: Für dich, von Herzen"></textarea><p id="textAdvice" class="personal-help" role="status"></p><h3>Deine Schrift</h3><div id="fontChoices" class="font-choices" role="group" aria-label="Schrift auswählen">${FONTS.map(f => `<button class="font-choice" data-personal-font="${fontId(f)}" aria-pressed="${fontId(f) === d.fontId}"><strong>${studioEscape(f.name)}</strong><span style="font-family:${studioEscape(f.family)}"></span></button>`).join('')}</div><button class="action primary" id="saveDraft">${d.id ? 'Änderungen speichern' : 'In Designmappe speichern'}</button><button class="action" id="cancelDraft">Abbrechen</button><p id="editorError" role="alert"></p></div></div></section>`;
+    document.getElementById('content').innerHTML = `<section class="page-wrap personal-page"><div class="eyebrow">Dein persönlicher Entwurf</div><h1>Mach es zu deinem Geschenk.</h1><ol class="personal-steps"><li>1 · Motiv wählen</li><li>2 · Text & Schrift</li><li>3 · In der Mappe speichern</li></ol><div class="personal-layout"><div><div id="compositionPreview">${personalPreview(d, true, true)}</div>${d.layoutVersion === 2 ? transformControls() : ''}<p class="personal-caption">Gestaltungsvorschau · keine massstabsgetreue Gravurvorlage</p><p id="fontStatus" role="status"></p></div><div class="personal-controls"><h2>Deine Gestaltung</h2><p>${motif ? studioEscape(studioPrettyName(motif.name)) + ' · ' + studioEscape(studioLabel(motif.category)) : 'Noch kein Motiv ausgewählt'}</p><button class="action" id="chooseMotif">${motif ? 'Motiv wechseln' : 'Motiv auswählen'}</button><label for="wishText">Dein Wunschtext</label><textarea id="wishText" rows="4" aria-describedby="textAdvice" placeholder="Zum Beispiel: Für dich, von Herzen"></textarea><p id="textAdvice" class="personal-help" role="status"></p>${d.layoutVersion === 3 ? frameControls() : ''}<h3>Deine Schrift</h3><div id="fontChoices" class="font-choices" role="group" aria-label="Schrift auswählen">${FONTS.map(f => `<button class="font-choice" data-personal-font="${fontId(f)}" aria-pressed="${fontId(f) === d.fontId}"><strong>${studioEscape(f.name)}</strong><span style="font-family:${studioEscape(f.family)}"></span></button>`).join('')}</div><button class="action primary" id="saveDraft">${d.id ? 'Änderungen speichern' : 'In Designmappe speichern'}</button><button class="action" id="cancelDraft">Abbrechen</button><p id="editorError" role="alert"></p></div></div></section>`;
     document.getElementById('wishText').value = d.text;
     document.getElementById('wishText').addEventListener('input', e => { d.text = e.target.value; personal.dirty = true; personalUpdate(); });
     document.getElementById('chooseMotif').onclick = personalPick;
     document.getElementById('saveDraft').onclick = personalSave;
     document.getElementById('cancelDraft').onclick = () => studioNavigate('map');
     document.querySelectorAll('[data-personal-font]').forEach(btn => btn.onclick = () => { d.fontId = btn.dataset.personalFont; personal.dirty = true; personalUpdate(); });
-    transformBindControls();
+    if (d.layoutVersion === 3) frameBindControls();
+    else if (d.layoutVersion === 2) transformBindControls();
     personalUpdate();
-    if (upgraded) personalNotice('Dieser ältere Entwurf ist jetzt für die frei gestaltbare Fläche vorbereitet. Erst mit „Änderungen speichern“ wird die neue Anordnung übernommen.');
+    if (d.layoutVersion !== 3) personalNotice('Älterer Entwurf: Das bisherige Layout bleibt erhalten. Es findet keine Umstellung auf das neue Rahmenmodell statt.');
 }
 let fontRequest = 0;
 function personalUpdate() {
     const d = personal.current;
     const font = personalFont(d.fontId);
-    document.getElementById('compositionPreview').innerHTML = personalPreview(d, true, true);
+    if (d.layoutVersion === 3 && document.querySelector('#compositionPreview .frame-v3')) frameUpdatePreview(d);
+    else document.getElementById('compositionPreview').innerHTML = personalPreview(d, true, true);
     personalImages();
     const count = Array.from(d.text).length;
     document.getElementById('textAdvice').textContent = `${count} Zeichen · ${count > 80 || d.text.split('\n').length > 2 ? 'Bei längeren Texten oder vielen Zeilen kann die Schrift auf dem fertigen Produkt zu klein werden. Prüfe die Lesbarkeit gemeinsam mit uns. Dein Text wird vollständig gespeichert.' : 'Zeilenumbrüche sind möglich. Bitte prüfe Schreibweise und Lesbarkeit.'}`;
@@ -133,7 +137,8 @@ function personalSave() {
     const motif = studio.catalog.find(m => m.id === d.motifId);
     const now = new Date().toISOString();
     const existing = personal.drafts.find(item => item.id === d.id);
-    const saved = { id: d.id || crypto.randomUUID(), motifId: d.motifId, motifName: motif.name, category: motif.category, text: d.text, fontId: d.fontId, layoutVersion: 2, transform: textTransform(d.transform), createdAt: existing?.createdAt || now, updatedAt: now };
+    const layout = d.layoutVersion === 3 ? { layoutVersion: 3, textFrame: copyTextFrame(d.textFrame) } : d.layoutVersion === 2 ? { layoutVersion: 2, transform: textTransform(d.transform) } : { layoutVersion: d.layoutVersion || 1 };
+    const saved = { id: d.id || crypto.randomUUID(), motifId: d.motifId, motifName: motif.name, category: motif.category, text: d.text, fontId: d.fontId, ...layout, createdAt: existing?.createdAt || now, updatedAt: now };
     const list = existing ? personal.drafts.map(item => item.id === d.id ? saved : item) : [...personal.drafts, saved];
     if (!mapWrite(list)) { error.textContent = document.getElementById('personalStatus').textContent; return; }
     personal.current = null; personal.dirty = false; personal.picking = false;
@@ -142,14 +147,14 @@ function personalSave() {
 function mapEdit(id) {
     const d = personal.drafts.find(item => item.id === id);
     if (!d) return;
-    personal.current = { ...d, ...(d.transform ? { transform: { ...d.transform } } : {}) }; personal.dirty = false; personal.picking = false;
+    personal.current = { ...d, ...(d.transform ? { transform: { ...d.transform } } : {}), ...(d.textFrame ? { textFrame: copyTextFrame(d.textFrame) } : {}) }; personal.dirty = false; personal.picking = false;
     studioNavigate('editor');
 }
 function mapDuplicate(id) {
     const d = personal.drafts.find(item => item.id === id);
     if (!d) return;
     const now = new Date().toISOString();
-    if (mapWrite([...personal.drafts, { ...d, ...(d.transform ? { transform: { ...d.transform } } : {}), id: crypto.randomUUID(), createdAt: now, updatedAt: now }])) { mapRender(); studioNavigation(); personalNotice('Entwurf dupliziert. Über „Bearbeiten“ kannst du die Variante anpassen.'); }
+    if (mapWrite([...personal.drafts, { ...d, ...(d.transform ? { transform: { ...d.transform } } : {}), ...(d.textFrame ? { textFrame: copyTextFrame(d.textFrame) } : {}), id: crypto.randomUUID(), createdAt: now, updatedAt: now }])) { mapRender(); studioNavigation(); personalNotice('Entwurf dupliziert. Über „Bearbeiten“ kannst du die Variante anpassen.'); }
 }
 function mapDelete(id) {
     if (!confirm('Diesen Entwurf aus der Designmappe löschen?')) return;
@@ -182,6 +187,7 @@ function mapFontStatus() {
         if (!el.isConnected) return;
         const names = missing.filter(Boolean);
         el.textContent = names.length ? `Originalschriften gerade nicht verfügbar: ${names.join(', ')}. Die Vorschau zeigt Ersatzschriften; deine Schriftauswahl bleibt gespeichert.` : '';
+        frameRefreshChecks();
     });
 }
 function mapCompare() {
@@ -204,7 +210,7 @@ function newConsultation() {
             if (oldMap === null) localStorage.removeItem(MAP_KEY); else localStorage.setItem(MAP_KEY, oldMap);
             throw error;
         }
-        personal.lastRaw = value; personal.epoch = JSON.parse(value).epoch;
+        personal.lastRaw = value; personal.epoch = JSON.parse(value).epoch; personal.storageVersion = 1;
     } catch (_) { personalNotice('Zurücksetzen nicht möglich: Der Browserspeicher ist gesperrt. Bitte verwende das Gerät erst nach erfolgreichem Zurücksetzen für den nächsten Kunden.'); return; }
     personal.drafts = []; personal.current = null; personal.dirty = false; personal.picking = false; personal.compare = []; personal.blocked = false;
     favorites = []; selectedFont = null; selectedDesign = null; studio.returnFocus = null;
