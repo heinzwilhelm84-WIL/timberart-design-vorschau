@@ -140,3 +140,51 @@ stündliche Lauf muss beaufsichtigt und der Pages-Build kontrolliert werden.
 - Aktuelles `main` als Basis: 415 Motive, zehn Kategorien, 830 WebPs. Alle
   ursprünglichen 412 IDs bleiben enthalten. Katalog, Motivdateien, App,
   Textbearbeitung, Fonts, Speicherung und Bestellsperren wurden nicht verändert.
+
+## Manueller Live-Dry-run ohne Veröffentlichung
+
+Im bestehenden Workflow gibt es zusätzlich die manuelle Auswahl `dry-run`.
+Nach einer separat freigegebenen Übernahme dieser Erweiterung auf `main`:
+
+1. **Actions → Google Drive – prepare motif sync PR → Run workflow** öffnen.
+2. Branch **main**, Modus **dry-run** auswählen und den Lauf bewusst starten.
+3. Die Job-Zusammenfassung lesen. Nur feste Statusmeldungen und Gesamtzahlen
+   erscheinen: neue Kategorien/Motive im Kandidaten, automatisch zulässige
+   Ergänzungen sowie zurückgehaltene bestehende und neue Datensätze.
+
+Der eigene Dry-run-Job liest den vorhandenen Sync-PR mit dem bisherigen sicheren
+Seed, authentifiziert sich über die bestehende WIF-Verbindung und verwendet den
+unveränderten Import mit `drive.readonly`. `--apply` schreibt Vorschauen und
+Kandidatendaten ausschliesslich in die wegwerfbare Arbeitskopie des Runners.
+Das ist kein Commit oder Push nach `main`. Danach laufen die bisherigen
+Datenprüfungen und die identische Ergänzungsprojektion mittels
+`drive_sync_additions.py --dry-run-summary`, ausdrücklich ohne `--publish`.
+
+Berechtigungen dieses Jobs: `contents: read`, `pull-requests: read` zum Lesen des
+Sync-PRs und `id-token: write` für WIF. Keine GitHub-Schreibrechte, PR-Erstellung,
+Pages-Anforderung oder Artefakt-Uploads. Die bisherigen Jobs/Berechtigungen und
+beide Aktivierungsschalter werden nicht verändert. Auch wenn später beide
+Schalter eingeschaltet wären, veröffentlicht dieser manuelle Modus nichts.
+
+Die acht Summen enthalten keine Namen, IDs, Quellpfade oder Zugangsdaten.
+Zurückgehaltene Bestandsdatensätze umfassen auch beim aktuellen Scan nicht mehr
+sichtbare Motive/Kategorien; sie werden weiterhin nicht gelöscht. Neue Kandidaten
+aus offenen PRs zählen zur Kandidatenmenge, benötigen aber für die automatische
+Zulässigkeit einen aktuellen passenden Inventurbeleg. Unbestätigte neue Inhalte
+werden separat als zurückgehalten ausgewiesen. Die Zusammenfassung ersetzt einen
+vorhandenen temporären Summary-Text, damit keine alten privaten Inhalte angehängt
+werden. Sie darf nicht dieselbe Datei wie der private Inventurbeleg verwenden.
+
+Voraussetzungen: Erweiterung auf `main`, zulässige Actions und lesender Zugriff
+auf den Sync-PR sowie bestehende WIF-/Drive-Freigabe. Eine Ausführung auf einem
+Entwicklungsbranch wird durch Workflow und WIF weiterhin nicht zugelassen.
+Es ist keine Aktivierung der Veröffentlichungsvariablen nötig. Fehler bei Import,
+Kandidatenprüfung oder Inventurbeleg beenden den Lauf ohne Erfolgszusammenfassung.
+Ein Dry-run bestätigt weder Hauptbranch-Schreibrechte noch Pages-Schreibrechte.
+
+Gezielte lokale Prüfung dieser Ergänzung: 36 Ergänzungs-/Workflow-Tests und 37
+bestehende Sync-Tests bestanden, ausschliesslich offline. Neue Fälle prüfen die
+Zählung gemischter Änderungen, fehlende Drive-Beobachtung, geänderte Kategorien,
+Datenschutz, unveränderten Git-Stand, gesperrte Veröffentlichungsaufrufe, auch bei
+beiden eingeschalteten Schaltern, sowie den read-only Workflow. Kein Live-Lauf,
+Merge, Deployment oder Aktivieren von Schaltern wurde dabei ausgeführt.

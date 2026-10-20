@@ -227,22 +227,50 @@ def publish(root, evidence_path=None):
     return commit, counts
 
 
+def dry_run_summary(root, evidence_path):
+    """Validate the existing projection; report only fixed aggregate counts, never publish."""
+    _, eligible = project(root, evidence_path)
+    evidence = images.read_json(evidence_path)
+    base_m = indexed(at_head(root, 'data/motifs-manifest.json')['motifs'])
+    candidate_m = indexed(images.read_json(root / 'data/motifs-manifest.json')['motifs'])
+    base_c = indexed(at_head(root, 'data/categories.json')['categories'])
+    candidate_c = indexed(images.read_json(root / 'data/categories.json')['categories'])
+    new_m, new_c = len(set(candidate_m) - set(base_m)), len(set(candidate_c) - set(base_c))
+    visible_m, visible_c = set(evidence['visibleMotifIds']), set(evidence['visibleCategoryIds'])
+    counts = [
+        ('Neue Kategorien im Kandidaten', new_c),
+        ('Neue Motive im Kandidaten', new_m),
+        ('Automatisch zulaessige neue Kategorien', eligible['newCategories']),
+        ('Automatisch zulaessige neue Motive', eligible['newImages']),
+        ('Zurueckgehaltene bestehende Kategorien', sum(candidate_c[k] != v or k not in visible_c for k,v in base_c.items())),
+        ('Zurueckgehaltene bestehende Motive', sum(candidate_m[k] != v or k not in visible_m for k,v in base_m.items())),
+        ('Zurueckgehaltene neue Kategorien', new_c - eligible['newCategories']),
+        ('Zurueckgehaltene neue Motive', new_m - eligible['newImages']),
+    ]
+    return '\n# Drive-Sync Dry-run\n\nStatus: geprueft; nichts veroeffentlicht.\n' + ''.join(f'- {label}: {count}\n' for label,count in counts)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo',type=Path,default=Path(__file__).resolve().parents[1])
-    parser.add_argument('--publish',action='store_true')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--publish',action='store_true')
+    mode.add_argument('--dry-run-summary',action='store_true',help='Validate without publication and report only aggregate counts')
     parser.add_argument('--evidence',type=Path,required=True)
     parser.add_argument('--report',type=Path)
     args = parser.parse_args()
     try:
         root = args.repo.resolve()
-        if args.report and args.report.resolve().is_relative_to(root):
-            raise sync.SyncError('Report must stay outside the repository.')
-        commit, counts = publish(root,args.evidence) if args.publish else ('', project(root,args.evidence)[1])
-        summary = '\n### Additions-only review\n' + ''.join(f'- {key}: {value}\n' for key,value in counts.items())
+        if args.report and (args.report.resolve().is_relative_to(root) or args.report.resolve() == args.evidence.resolve()):
+            raise sync.SyncError('Report must be separate from the private evidence and outside the repository.')
+        if args.dry_run_summary:
+            commit, summary = '', dry_run_summary(root,args.evidence)
+        else:
+            commit, counts = publish(root,args.evidence) if args.publish else ('', project(root,args.evidence)[1])
+            summary = '\n### Additions-only review\n' + ''.join(f'- {key}: {value}\n' for key,value in counts.items())
         print(summary)
         if args.report:
-            with args.report.open('a') as report:
+            with args.report.open('w' if args.dry_run_summary else 'a') as report:
                 report.write(summary)
         if commit and os.environ.get('GITHUB_OUTPUT'):
             with open(os.environ['GITHUB_OUTPUT'],'a') as output:
