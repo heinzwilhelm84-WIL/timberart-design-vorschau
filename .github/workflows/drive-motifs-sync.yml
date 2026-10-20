@@ -11,8 +11,9 @@ on:
         options:
           - inventory
           - prepare-pr
-  # Future hourly schedule: cron '17 * * * *'. Intentionally NOT enabled.
-  # Activate only after explicit approval; the prepare job already handles schedule.
+  # GitHub cron uses UTC. Only prepares a draft PR; never merges or deploys.
+  schedule:
+    - cron: '17 * * * *'
 
 permissions: {}
 

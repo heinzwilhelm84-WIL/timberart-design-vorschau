@@ -1,15 +1,17 @@
-# Automatischer Motivabgleich – Implementierung, noch nicht aktiviert
+# Automatischer Motivabgleich – stündliche Draft-PRs
 
-Stand: 19.10.2026. Lokaler Entwicklungsbranch `feature/drive-sync-automatik`,
-Basis `d9b8bf6` (vom Benutzer übernommener erfolgreicher Verbindungstest).
-Diese Vorbereitung startet keinen Live-Abgleich, keinen Push, PR, Merge oder Deploy.
+Stand: 20.10.2026. Lokaler Entwicklungsbranch `feature/drive-sync-stundenplan`,
+Basis `5015180` (übernommener PR #7 mit vollständigem Erstimport).
+Die Zeitplanänderung ist noch nicht übertragen. Diese Vorbereitung startet keinen
+Live-Abgleich, Push, PR, Merge oder Deploy.
 
 ## Daten und stabile Kategorien
 
 `data/categories.json` enthält die neun bisherigen Kategorien mit festen
 `legacy-…`-IDs und unveränderten bisherigen Kategorie-Schlüsseln. Die tatsächlichen
-Drive-Ordner-IDs sind noch unbekannt und werden **nicht geraten**. Die erste
-Inventur ordnet sie anhand vorhandener Motiv-IDs und eindeutiger Ordnernamen zu.
+Drive-Ordner-IDs wurden im übernommenen Erstimport gebunden. Bei weiteren,
+noch ungebundenen Quellen ordnet die Inventur anhand vorhandener Motiv-IDs und
+eindeutiger Ordnernamen zu; unbekannte IDs werden **nicht geraten**.
 Mehrdeutige oder widersprüchliche Erstzuordnungen brechen mit einer festen,
 metadatenfreien Meldung ab. Namenshinweise werden auch in tieferen Ordnern geprüft.
 Ein Motivfund in einem anderen Ordner überstimmt keinen passenden Ordnernamen.
@@ -61,9 +63,9 @@ bleiben deren Bytes und Pfade bestehen; nur abweichende Varianten werden erzeugt
 Inhalts-Hashes verhindern doppelte gleichnamige Dateien und erkennen Kollisionen.
 Alte Vorschauversionen werden nicht automatisch entfernt.
 
-Die bestehenden 412 Herkunftseinträge enthalten noch keine Prüfsumme des
-Drive-Originals. Daher ist beim ersten vollständigen Abgleich eine **einmalige
-Verifikation der 412 lesbaren Originale** notwendig. Die öffentliche Inventur meldet
+Die bestehenden 412 Herkunftseinträge besitzen seit PR #7 einen Original-Fingerprint.
+Die einmalige Erstverifikation ist abgeschlossen. Neue unbestätigte Herkunftseinträge
+benötigen weiterhin eine **einmalige Verifikation des lesbaren Originals**. Die öffentliche Inventur meldet
 hierfür nur die Anzahl `unverifiedExisting` und geplanter Downloads, keine
 Originalgrössen oder Quelldetails.
 Danach verhindert ein unveränderter Original-Fingerprint erneute Downloads und
@@ -91,11 +93,15 @@ bei abschliessenden Validierungsfehlern werden alle geschriebenen Dateien zurüc
 
 ## Workflow und Berechtigungen
 
-`.github/workflows/drive-motifs-sync.yml` ist **ausschliesslich manuell startbar**.
-Der Stundenplan ist lediglich als Kommentar vorbereitet (`17 * * * *`). Kein
-`schedule`-Ereignis ist registriert. Beide Jobs erlauben nur das feste Repository
-1425353605 auf `refs/heads/main`. Die Stundenplan-Logik ist für eine spätere,
-separat freizugebende Aktivierung vorhanden, löst derzeit aber nichts aus.
+`.github/workflows/drive-motifs-sync.yml` enthält auf diesem Entwicklungsbranch
+den Stundenplan `17 * * * *` und den manuellen Start. Erst nach separater Freigabe
+und Übernahme auf den Standardbranch main wirkt der Zeitplan bei GitHub.
+Er läuft jeweils zur Minute 17 in UTC (am 20.10.2026 also zur Minute 17 jeder
+Schweizer Stunde ebenfalls; es gibt keine feste einmalige Tageszeit).
+Ein `schedule`-Ereignis startet nur den PR-Vorbereitungsjob, keine Inventur.
+Beide Jobs erlauben ausschliesslich Repository 1425353605 auf `refs/heads/main`.
+Die feste gemeinsame Concurrency-Gruppe verhindert überlappende Ausführungen;
+ein laufender Import wird nicht automatisch abgebrochen.
 
 - `inventory` (Voreinstellung): `contents: read`, `id-token: write`;
   Google-Scope `drive.metadata.readonly`. Keine Bilder und keine PR-Schreibrechte.
@@ -185,7 +191,19 @@ auf token-erzeugten PRs können eine manuelle Freigabe verlangen. Die Bild-/ID-
 Prüfung erfolgt deshalb schon vor der PR-Action. Ein Konflikt führt zum Abbruch,
 nicht zum Überschreiben fremder Änderungen. Den Bot-Branch nicht manuell bearbeiten.
 
-## Erster kontrollierter Live-Test – erst nach ausdrücklicher Freigabe
+## Inbetriebnahme des Zeitplans – erst nach ausdrücklicher Freigabe
+
+PR #7 mit dem Erstimport wurde bereits übernommen. Die neue Zeitplanänderung
+wird zunächst nur lokal geprüft (siehe [drive-sync-schedule-review.md](drive-sync-schedule-review.md)).
+Danach sind die Übertragung dieses Entwicklungsbranches und die Übernahme auf main
+getrennt freizugeben. Kein automatischer Merge, keine automatische Pages-Veröffentlichung.
+Eine vorhandene main-basierte Pages-Konfiguration kann auf eine manuelle Übernahme
+reagieren; dies ist vor einem solchen Merge separat zu berücksichtigen.
+Der Sync-Workflow selbst erstellt/aktualisiert nur `bot/drive-motifs-sync` als Draft-PR.
+Ohne Änderungen entsteht kein neuer Datencommit. Ein offener PR wird zunächst
+als geprüfte Datenquelle eingelesen; unveränderte Originale bleiben übersprungen.
+
+### Historischer Ablauf des Erstimports / weitere neue Quellen
 
 1. Jetzt nur lokalen Code prüfen. Kein Push und kein Live-Lauf wurde ausgeführt.
 2. Erst nach separater Freigabe diesen Entwicklungsbranch übertragen und prüfen.
@@ -206,8 +224,8 @@ nicht zum Überschreiben fremder Änderungen. Den Bot-Branch nicht manuell bearb
 5. Entwurfs-PR auf alle IDs, Kategorien, Bilder und Bericht prüfen. Nichts wird
    automatisch gemergt oder auf Pages veröffentlicht. Ein zweiter, freigegebener
    Lauf mit unveränderten Quellen muss die gespeicherten Fingerprints wiederverwenden.
-6. Erst später nach neuer Freigabe den vorbereiteten Stundenplan tatsächlich
-   unter `on` eintragen. Ohne diesen Eintrag läuft nichts automatisch.
+6. Der Stundenplan ist jetzt lokal eingetragen; ohne Übernahme auf main wird
+   dadurch bei GitHub weiterhin kein geplanter Lauf aktiviert.
 
 Der erfolgreiche Metadaten-Verbindungstest bestätigt noch nicht den Download von
 Originalen. Der `drive.readonly`-Scope und Downloadrechte des Betrachters müssen
@@ -238,7 +256,7 @@ mit Maus/Touch geprüft; keine physischen Geräte und keine echte Google-Anmeldu
 Ausführliches Ergebnis der durchgeführten Offline-Prüfungen:
 [drive-sync-test-results.md](drive-sync-test-results.md).
 
-Auch ein später aktivierter GitHub-Zeitplan ist kein Echtzeitdienst: Läufe können
+Der GitHub-Zeitplan ist kein Echtzeitdienst: Läufe können
 sich verzögern. In öffentlichen Repositorys kann GitHub geplante Workflows nach
 60 Tagen ohne Repository-Aktivität deaktivieren. Der manuelle Start bleibt daher
 als Ausweichweg erhalten; der letzte erfolgreiche Lauf sollte kontrolliert werden.

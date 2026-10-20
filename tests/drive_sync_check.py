@@ -252,6 +252,36 @@ class SyncChecks(unittest.TestCase):
   with self.assertRaises(sync.SyncError):guard.three_way(base,base,[])
 
 class PendingSeedChecks(unittest.TestCase):
+ def test_repeated_open_pr_seed_preserves_pending_images_and_skips_processing(self):
+  with tempfile.TemporaryDirectory() as temp:
+   root=pathlib.Path(temp)/'repo';api=fixture(root)
+   def run(*args):return subprocess.check_output(['git',*args],cwd=root,stderr=subprocess.DEVNULL).decode().strip()
+   sync.synchronize(root,api,True)
+   run('init','-b','main');run('config','user.name','Offline');run('config','user.email','offline@example.invalid')
+   run('add','.');run('commit','-qm','verified baseline');run('switch','-c','bot/drive-motifs-sync')
+   # An open PR contains both a changed existing image and a new folder/image.
+   data=blob('blue');api.tree['a']=[image('old','Alt.png',data)];api.payloads['old']=data
+   data=blob('green');api.tree['root'].append(folder('pending-folder','Neu'))
+   api.tree['pending-folder']=[image('pending-new','Neu.png',data)];api.payloads['pending-new']=data
+   sync.synchronize(root,api,True);run('add','.');run('commit','-qm','pending generated data')
+   pending=run('rev-parse','HEAD');run('switch','main')
+   original_git,original_run=guard.git,subprocess.run
+   def git(root,*args,**kwargs):
+    if args[0]=='fetch':(root/'.git/FETCH_HEAD').write_text(pending+'\n');return ''
+    return original_git(root,*args,**kwargs)
+   def command(args,*a,**kwargs):
+    if args[:3]==['gh','pr','list']:return subprocess.CompletedProcess(args,0,json.dumps([{'number':1,'isCrossRepository':False,'headRefOid':pending}]).encode(),b'')
+    return original_run(args,*a,**kwargs)
+   for iteration in range(2):
+    with self.subTest(iteration=iteration),patch.object(guard,'git',side_effect=git),patch.object(guard.subprocess,'run',side_effect=command):
+     self.assertTrue(guard.seed_pending(root))
+    before=snapshot(root);api.downloads=[]
+    with patch.object(sync,'screen_source',side_effect=AssertionError('Unchanged images must not be reprocessed')):
+     report=sync.synchronize(root,api,True)
+    self.assertEqual(api.downloads,[]);self.assertEqual(report['changedFiles'],[])
+    self.assertEqual(snapshot(root),before)
+    self.assertEqual({m['id'] for m in images.read_json(root/'catalog.json')},{'old','pending-new'})
+    self.assertEqual({c['id'] for c in images.read_json(root/'data/categories.json')['categories']},{'legacy-fixed','drive-pending-folder'})
  def test_pending_data_is_merged_without_executing_its_code_and_unknown_paths_are_refused(self):
   with tempfile.TemporaryDirectory() as temp:
    root=pathlib.Path(temp)/'repo';api=fixture(root)
@@ -333,10 +363,12 @@ class APIAndWorkflowChecks(unittest.TestCase):
    def open(self,*args,**kwargs):return Response(self.data)
   for data in [{'files':[],'incompleteSearch':True},{'files':[],'nextPageToken':'same'}]:
    with self.assertRaises(sync.SyncError):list(sync.DriveAPI('OFFLINE-ONLY',Opener(data)).children('root'))
- def test_workflow_has_no_timer_deploy_or_artifacts_and_scopes_are_separated(self):
+ def test_workflow_hourly_timer_has_no_deploy_or_artifacts_and_scopes_are_separated(self):
   import yaml
   w=yaml.load((ROOT/'.github/workflows/drive-motifs-sync.yml').read_text(),Loader=yaml.BaseLoader)
-  self.assertEqual(set(w['on']),{'workflow_dispatch'});self.assertEqual(w['permissions'],{})
+  self.assertEqual(set(w['on']),{'workflow_dispatch','schedule'});self.assertEqual(w['permissions'],{})
+  self.assertEqual(w['on']['schedule'],[{'cron':'17 * * * *'}])
+  self.assertEqual(w['concurrency'],{'group':'timberart-drive-motifs-sync','cancel-in-progress':'false'})
   self.assertEqual(w['jobs']['inventory']['permissions'],{'contents':'read','id-token':'write'})
   for job in w['jobs'].values():
    self.assertIn("github.ref == 'refs/heads/main'",job['if'])
@@ -344,6 +376,27 @@ class APIAndWorkflowChecks(unittest.TestCase):
     self.assertNotIn('upload-artifact',step.get('uses',''));self.assertNotIn('deploy',step.get('uses',''))
     if 'uses' in step:self.assertRegex(step['uses'],r'@[a-f0-9]{40}$')
   pr=w['jobs']['prepare']['steps'][-1];self.assertEqual(pr['with']['base'],'main');self.assertEqual(pr['with']['branch'],'bot/drive-motifs-sync');self.assertEqual(pr['with']['draft'],'always-true')
+  self.assertEqual(w['jobs']['prepare']['permissions'],{'contents':'write','pull-requests':'write','id-token':'write'})
+  self.assertEqual(pr['with']['add-paths'].split(),['catalog.json','data/categories.json','data/motifs-manifest.json','data/drive-sync-state.json','assets/motifs/'])
+ def test_workflow_event_matrix_keeps_inventory_manual_and_schedule_on_trusted_main(self):
+  import yaml,re
+  w=yaml.load((ROOT/'.github/workflows/drive-motifs-sync.yml').read_text(),Loader=yaml.BaseLoader)
+  def jobs(event,mode=None,repo=guard.REPOSITORY,ref='refs/heads/main',repo_id='1425353605'):
+   values={'github.event_name':event,'inputs.mode':mode,'github.repository':repo,'github.ref':ref,'github.repository_id':repo_id}
+   selected=[]
+   for name,job in w['jobs'].items():
+    expression=job['if'].strip().removeprefix('${{').removesuffix('}}').strip().replace('&&',' and ').replace('||',' or ')
+    expression=re.sub(r'\b(?:github|inputs)\.[a-z_]+\b',lambda m:repr(values[m[0]]),expression)
+    if eval('('+expression+')',{'__builtins__':{}},{}):selected.append(name)
+   return selected
+  self.assertEqual(jobs('schedule'),['prepare'])
+  self.assertEqual(jobs('workflow_dispatch','inventory'),['inventory'])
+  self.assertEqual(jobs('workflow_dispatch','prepare-pr'),['prepare'])
+  self.assertEqual(jobs('workflow_dispatch'),[])
+  self.assertEqual(jobs('push'),[]);self.assertEqual(jobs('pull_request'),[])
+  self.assertEqual(jobs('schedule',ref='refs/heads/feature/test'),[])
+  self.assertEqual(jobs('schedule',repo='other/repo'),[])
+  self.assertEqual(jobs('schedule',repo_id='1'),[])
 
 if __name__=='__main__':
  with patch.object(socket,'create_connection',side_effect=AssertionError('Offline tests must never use network')):unittest.main()

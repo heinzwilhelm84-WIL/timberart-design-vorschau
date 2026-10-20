@@ -135,10 +135,12 @@ auf eigene Dateien eingeschränkt. Originale auf Drive bleiben unverändert.
 Import, eindeutige Originalzuordnung, Erweiterung um neue Drive-Ordner, Prüfbefehle
 und Einschränkungen: [docs/motifs-import.md](docs/motifs-import.md).
 
-## Vorbereitete Drive-Synchronisierung
+## Drive-Synchronisierung
 
-Branch `feature/drive-sync-automatik`: stabile Kategoriezuordnung, authentifizierter
-inkrementeller Import und manuelle Inventur/Entwurfs-PR-Erstellung mit WIF.
-Der Stundenplan ist nicht aktiviert; keine Live-Synchronisierung wurde ausgeführt.
-Ablauf, Berechtigungen, Offline-Prüfungen und kontrollierte Inbetriebnahme:
+Stabile Kategoriezuordnung und inkrementeller Import mit WIF; der erste Import
+wurde mit PR #7 übernommen. Branch `feature/drive-sync-stundenplan` bereitet lokal
+den Stundenplan `17 * * * *` vor: Draft-PR statt automatischem Merge oder Deployment.
+Der Zeitplan wird erst nach separater Freigabe und Übernahme auf main wirksam.
+Prüfbericht: [docs/drive-sync-schedule-review.md](docs/drive-sync-schedule-review.md).
+Ablauf, Berechtigungen und technische Grenzen:
 [docs/drive-sync.md](docs/drive-sync.md).
