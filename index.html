@@ -54,9 +54,10 @@
         .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #e0e0e0; border-top-color: #2d5016; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.5rem; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
-    <meta name="theme-color" content="#7160ac">
+    <meta name="theme-color" content="#F6F2EA">
     <link rel="stylesheet" href="studio.css">
     <link rel="stylesheet" href="text-frame.css">
+    <link rel="stylesheet" href="atelier.css">
 </head>
 <body>
     <aside class="preview-banner" aria-label="Testversion"><strong>TESTVERSION · Unverbindliche Vorschau</strong><span>Keine echten Bestellungen. Formulare werden nur lokal getestet; es werden keine Bestelldaten übermittelt.</span></aside>
@@ -64,7 +65,7 @@
     <a class="skip-link" href="#content">Zum Inhalt</a>
     <header class="studio-header">
         <button class="brand" type="button" onclick="studioNavigate('home')" aria-label="TimberArt Startseite">
-            <span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 4v32M4 20h32M9 9l22 22M9 31 31 9"/></svg></span>
+            <img class="brand-logo" src="./assets/brand/timberart-logo.png" alt="" width="64" height="64">
             <span>TimberArt<span class="brand-caption">DESIGN STUDIO</span></span>
         </button>
         <nav id="navContainer" aria-label="Hauptnavigation"></nav>
@@ -73,7 +74,7 @@
     </header>
     <p id="personalStatus" class="personal-status" role="status" aria-live="polite"></p>
     <main id="studioMain"><div id="content" tabindex="-1"></div></main>
-    <footer class="studio-footer"><button class="footer-brand" onclick="studioNavigate('home')">TimberArt <span>Design Studio</span></button><p>Aus einer kleinen Idee wird etwas ganz Persönliches.</p><span>Entdecken. Ausprobieren. Freude schenken.</span></footer>
+    <footer class="studio-footer"><button class="footer-brand" onclick="studioNavigate('home')"><img class="footer-logo" src="./assets/brand/timberart-logo.png" alt="" width="44" height="44"><span>TimberArt <small>Design Studio</small></span></button><p>Aus einer kleinen Idee wird etwas ganz Persönliches.</p><span>Entdecken. Ausprobieren. Freude schenken.</span></footer>
     <div id="imageModal" class="modal">
         <div class="modal-content" style="max-width: 700px;">
             <button class="modal-close" onclick="closeImageModal()">✕</button>
