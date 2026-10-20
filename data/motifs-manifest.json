@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-20T13:13:06.095309+00:00",
+  "generatedAt": "2026-10-20T14:59:09.327857+00:00",
   "generator": {
     "version": 1,
     "edges": [
@@ -27769,13 +27769,13 @@
         "modifiedTime": "2026-10-20T10:01:14.941Z",
         "md5Checksum": "3ef4abf38c27e23b648cb618d40b39d5",
         "size": "2502964",
-        "version": "2",
+        "version": "3",
         "mimeType": "image/png",
         "folderIds": [
           "1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
         ]
       },
-      "sourceFingerprint": "a46930b715540504fae9c912ef3d28061c588f415bd78c4695e08b67270b6688",
+      "sourceFingerprint": "ae310cd14f5914712e47c50bcc0cd57abc688dcb3227fc51a6a471f24aa9b2dc",
       "variants": {
         "600": {
           "path": "assets/motifs/1dedfjqbbgf9pCuuLci5vrSMB19O38uD-/600-8139f10a17b56c2f.webp",
@@ -27802,6 +27802,73 @@
         "kind": "Authenticated read-only raster source; never published",
         "sha256": "9856df3548c48cd2814f800d170c2de9fa499302e7302fcf7b1c0c8c1c81370e",
         "bytes": 2502964,
+        "mimeType": "image/png",
+        "format": "PNG",
+        "width": 2172,
+        "height": 724
+      },
+      "generator": {
+        "version": 1,
+        "edges": [
+          600,
+          1600
+        ],
+        "format": "WebP",
+        "lossless": true,
+        "method": 4,
+        "exact": true,
+        "resampling": "RGB/RGBA before LANCZOS",
+        "pillow": "12.3.0",
+        "libwebp": "1.6.0"
+      }
+    },
+    {
+      "id": "1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk",
+      "name": "Bergkette-Churfürsten",
+      "category": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+      "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+      "source": {
+        "provider": "google-drive",
+        "fileId": "1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk",
+        "originalUrl": "https://drive.google.com/file/d/1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk/view",
+        "originalFilename": "Bergkette-Churfürsten.png",
+        "rootFolderId": "12OdcNV5wB5S1H471D0F8th9EJ2LFrJ6G",
+        "modifiedTime": "2026-10-20T14:23:55.571Z",
+        "md5Checksum": "7d0f95f9dabef63cdca143673453853a",
+        "size": "3045930",
+        "version": "2",
+        "mimeType": "image/png",
+        "folderIds": [
+          "1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
+        ]
+      },
+      "sourceFingerprint": "393b6808b55245518c707ed45693531b46b464f89430cbeb5e6afe43dcf77a61",
+      "variants": {
+        "600": {
+          "path": "assets/motifs/1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk/600-04acaa08dd3ab4ba.webp",
+          "width": 600,
+          "height": 200,
+          "bytes": 117712,
+          "sha256": "04acaa08dd3ab4bab368cc5137931a796e21e6c2edcfdfce118dd9f534de2e82",
+          "pixelSha256": "bce98396e61f9d4c8d0d8006717072a2c0920f8677518cd7b9f1cf7295919d69",
+          "losslessVerified": true
+        },
+        "1600": {
+          "path": "assets/motifs/1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk/1600-66db472cac0680fe.webp",
+          "width": 1600,
+          "height": 533,
+          "bytes": 863056,
+          "sha256": "66db472cac0680fe765fd9cec144463ffbb518b42700c05f005a149fd26539dd",
+          "pixelSha256": "7850c2e1d85497eda392fa1c9f909997b316d2d704b8470ac01dddac49fa869c",
+          "losslessVerified": true
+        }
+      },
+      "syncVersion": 1,
+      "originalFingerprint": "md5:7d0f95f9dabef63cdca143673453853a",
+      "previewSource": {
+        "kind": "Authenticated read-only raster source; never published",
+        "sha256": "20760d147f16e31e13f23e266a9aabbee25407d025e4bffaf12b973cd4cafdcc",
+        "bytes": 3045930,
         "mimeType": "image/png",
         "format": "PNG",
         "width": 2172,

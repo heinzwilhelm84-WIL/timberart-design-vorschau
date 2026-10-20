@@ -9128,5 +9128,27 @@
       }
     ],
     "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
+  },
+  {
+    "id": "1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk",
+    "name": "Bergkette-Churfürsten",
+    "category": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_",
+    "url": "./assets/motifs/1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk/600-04acaa08dd3ab4ba.webp",
+    "detailUrl": "./assets/motifs/1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk/1600-66db472cac0680fe.webp",
+    "images": [
+      {
+        "url": "./assets/motifs/1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk/600-04acaa08dd3ab4ba.webp",
+        "edge": 600,
+        "width": 600,
+        "height": 200
+      },
+      {
+        "url": "./assets/motifs/1xOAjlBuI6y4KVPrlP-AwJs4eKXbbOLAk/1600-66db472cac0680fe.webp",
+        "edge": 1600,
+        "width": 1600,
+        "height": 533
+      }
+    ],
+    "categoryId": "drive-1t2mfcmEpr0xENuvae1_z6AlIrC39qqI_"
   }
 ]
