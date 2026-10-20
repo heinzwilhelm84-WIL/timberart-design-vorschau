@@ -41,7 +41,16 @@ with sync_playwright() as p:
   def anchor(f,sx,sy):
    a=math.radians(f['rotation']);return (f['x']-math.cos(a)*sx*f['width']/2+math.sin(a)*sy*f['height']/2,f['y']-math.sin(a)*sx*f['width']/2-math.cos(a)*sy*f['height']/2)
   def text_height():return page.locator('.frame-text').evaluate('e=>e.scrollHeight')
-  handles={'nw':(-1,-1),'n':(0,-1),'ne':(1,-1),'e':(1,0),'se':(1,1),'s':(0,1),'sw':(-1,1),'w':(-1,0)}
+  handles={'nw':(-1,-1),'ne':(1,-1),'se':(1,1),'sw':(-1,1)}
+  # Four empty corner buttons, one separate rotate grip; no side grips or arrows.
+  assert page.locator('[data-frame-handle]').evaluate_all('els => els.map(e=>e.dataset.frameHandle)')==list(handles)
+  assert page.locator('.rotate-handle').count()==1
+  for grip in page.locator('.resize-handle').all():
+   assert grip.inner_text()=='' and grip.locator('span').count()==0
+   style=grip.evaluate("e=>{const b=getComputedStyle(e),c=getComputedStyle(e,'::before');return {background:b.backgroundColor,shadow:b.boxShadow,size:parseFloat(c.width),height:parseFloat(c.height),fill:c.backgroundColor}}")
+   assert style['background']=='rgba(0, 0, 0, 0)' and style['shadow']=='none'
+   assert style['size']==style['height']==16 and style['fill']=='rgb(255, 255, 255)'
+   assert grip.evaluate("e=>getComputedStyle(e,'::before').borderTopColor===getComputedStyle(document.querySelector('.rotate-handle')).backgroundColor")
   raw='Feine Linien und persönliche Wünsche bleiben erhalten. '*4+'\nFeste zweite Zeile\n'
   page.locator('#wishText').fill(raw);page.locator('#frame-align').select_option('right')
   for rotation in [0,31,90,-47]:
@@ -66,7 +75,7 @@ with sync_playwright() as p:
   page.locator('#frame-align').select_option('right')
   # Reflow occurs while the pointer is still down, and widening removes soft breaks.
   configure(x=300,y=300,width=210,height=300,fontSize=26,rotation=31);select();old_height=text_height()
-  start=center('[data-frame-handle="e"]');surface=page.locator('#designSurface').bounding_box();scale=surface['width']/600;a=math.radians(31)
+  start=center('[data-frame-handle="se"]');surface=page.locator('#designSurface').bounding_box();scale=surface['width']/600;a=math.radians(31)
   def live():
    assert text_height()<old_height
    assert model()['fontSize']==26 and model()['align']=='right'
@@ -78,7 +87,7 @@ with sync_playwright() as p:
   drag(start,(origin[0]+dx*math.cos(a)-dy*math.sin(a),origin[1]+dx*math.sin(a)+dy*math.cos(a)))
   assert abs(model()['rotation']-before['rotation']-35)<1.5,(width,before,model())
   assert all(model()[k]==before[k] for k in ['width','height','fontSize','x','y'])
-  start=center('[data-frame-handle="s"]');before=model();a=math.radians(before['rotation']);drag(start,(start[0]-math.sin(a)*20,start[1]+math.cos(a)*20));assert model()['height']>before['height'] and model()['fontSize']==34
+  start=center('[data-frame-handle="se"]');before=model();a=math.radians(before['rotation']);drag(start,(start[0]-math.sin(a)*20,start[1]+math.cos(a)*20));assert model()['height']>before['height'] and model()['fontSize']==34
   # Dragging + cancellation restores the entire snapshot (Escape / touchCancel).
   select();before=model();start=center('[data-frame-handle="nw"]');drag(start,(start[0]+20,start[1]+15),cancel=True);assert model()==before
   select();start=center('.frame-v3-object');before=model();drag(start,(start[0]+10,start[1]-10));assert model()['x']!=before['x'] and all(model()[k]==before[k] for k in ['width','height','fontSize','rotation'])
@@ -87,18 +96,19 @@ with sync_playwright() as p:
    configure(x=x,y=y,width=32,height=32,rotation=rotation);scroll()
    page.locator('.frame-v3-object').focus();page.keyboard.press('Enter')
    assert page.locator('.frame-warning').is_visible()
+   assert page.locator('.frame-v3-object').evaluate("e=>getComputedStyle(e).outlineStyle")=='dashed'
    for handle in handles:
     start=center(f'[data-frame-handle="{handle}"]');assert page.evaluate('p=>document.elementFromPoint(...p).closest("[data-frame-handle]")?.dataset.frameHandle',list(start))==handle,(width,x,y,handle)
   # Shrinking height visibly warns; growing again clears the warning, with full text.
   configure(x=300,y=300,width=300,height=200,rotation=0,fontSize=26)
   page.locator('#wishText').fill('Erste Zeile\nZweite Zeile');select()
   assert page.locator('.frame-warning').is_hidden()
-  b=page.locator('#designSurface').bounding_box();scale=b['width']/600;start=center('[data-frame-handle="s"]')
+  b=page.locator('#designSurface').bounding_box();scale=b['width']/600;start=center('[data-frame-handle="se"]')
   drag(start,(start[0],start[1]-150*scale));assert page.locator('.frame-warning').is_visible()
-  start=center('[data-frame-handle="s"]');drag(start,(start[0],start[1]+150*scale));assert page.locator('.frame-warning').is_hidden()
+  start=center('[data-frame-handle="se"]');drag(start,(start[0],start[1]+150*scale));assert page.locator('.frame-warning').is_hidden()
   page.locator('#wishText').fill(raw);configure(fontSize=34)
   # Keyboard resize, saved geometry, reload and identical map/compare rendering.
-  configure(x=300,y=300,width=300,height=180,rotation=31);select();page.locator('[data-frame-handle="e"]').focus();before=model();page.keyboard.press('ArrowRight');assert model()['width']>before['width'] and model()['fontSize']==before['fontSize']
+  configure(x=300,y=300,width=300,height=180,rotation=31);select();page.locator('[data-frame-handle="se"]').focus();before=model();page.keyboard.press('ArrowRight');assert model()['width']>before['width'] and model()['fontSize']==before['fontSize']
   target=model();assert abs(float(page.locator('#frame-width').input_value())-target['width'])<=.051
   page.locator('#frame-width').focus();page.locator('#frame-width').press('Tab');assert model()==target
   page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert page.evaluate('personal.drafts[0].textFrame')==target
@@ -110,12 +120,19 @@ with sync_playwright() as p:
   for el in page.locator('.frame-v3-object').all():assert abs(el.evaluate('e=>parseFloat(e.style.width)')-target['width'])<.001
   page.locator('[data-compare-edit]').first.click();assert model()==target and page.locator('#wishText').input_value()==raw
   assert page.locator('.resize-handle:visible').count()==0
-  select();assert page.locator('.resize-handle:visible').count()==8
+  select();assert page.locator('.resize-handle:visible').count()==4
+  assert page.locator('.frame-v3-object').evaluate("e=>getComputedStyle(e).outlineStyle")=='dashed'
+  for grip in page.locator('.resize-handle').all():
+   box=grip.bounding_box();assert box['width']>=48 and box['height']>=48
+   # The invisible target outside the 16px circle must accept real mouse/touch input.
+   point=(box['x']+box['width']/2+20,box['y']+box['height']/2)
+   assert page.evaluate('p=>document.elementFromPoint(...p)?.dataset.frameHandle',list(point))==grip.get_attribute('data-frame-handle')
+  before=model();start=center('[data-frame-handle="se"]');start=(start[0]+20,start[1]);drag(start,(start[0]+5,start[1]+5));assert model()!=before
   if os.environ.get('TIMBERART_FRAME_SCREENSHOTS'):page.screenshot(path=f'/tmp/timberart-frame-{width}.png')
   page.locator('#wishText').click();assert page.locator('.resize-handle:visible').count()==0
   assert not errors,errors;assert not posts,posts
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-  print(f'PASS {width}px: 8 handles x 4 rotations; fixed anchors/font/alignment; live reflow; rotate-resize-move-font sequence; cancel; edge/tiny controls; keyboard; save/reopen/map/compare; selection; no POSTs/errors',flush=True)
+  print(f'PASS {width}px: 4 corner handles x 4 rotations; fixed anchors/font/alignment; live reflow; rotate-resize-move-font sequence; cancel; edge/tiny controls; keyboard; save/reopen/map/compare; selection; no POSTs/errors',flush=True)
   ctx.close()
  browser.close()
 server.shutdown()
