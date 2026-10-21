@@ -20,9 +20,11 @@ with sync_playwright() as p:
   def metrics(selector='.frame-v3-object'):
    return page.locator(selector).first.evaluate('''o=>{const t=o.querySelector('.frame-text'),v=o.querySelector('.frame-text-viewport'),s=getComputedStyle(t);return {width:o.offsetWidth,height:o.offsetHeight,innerWidth:v.clientWidth,innerHeight:v.clientHeight,fontSize:s.fontSize,lineHeight:s.lineHeight,align:s.textAlign,textHeight:t.scrollHeight,transform:o.style.transform,text:o.querySelector('.frame-text-content').textContent}}''')
   def activate_text():
-   el=page.locator('#designSurface .frame-v3-object');el.scroll_into_view_if_needed();b=el.bounding_box()
-   if touch:page.touchscreen.tap(b['x']+b['width']/2,b['y']+b['height']/2)
-   else:page.mouse.click(b['x']+b['width']/2,b['y']+b['height']/2)
+   el=page.locator('#designSurface .frame-v3-object')
+   # Wait for stable hit geometry after leaving number inputs before native tap.
+   if touch:el.tap()
+   else:el.click()
+   page.locator('.rotate-handle').wait_for(state='visible')
   page.goto(URL);ready();page.locator('[data-view="motifs"]').click();page.locator('[data-design]').first.click();page.get_by_role('button',name='Personalisieren',exact=True).click()
   assert page.evaluate('personal.current.layoutVersion')==3
   assert page.evaluate("!('transform' in personal.current) && !('scale' in personal.current.textFrame)")
