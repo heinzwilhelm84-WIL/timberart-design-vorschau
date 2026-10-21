@@ -1,3 +1,8 @@
+> **Aktueller Marktstand-Modus:** In Motivauswahl, Editor und Designmappe gibt es nur
+> „Design als PNG speichern“. Versand- und Testbestellformulare sowie SVG-/JSON-Buttons
+> sind entfernt. Die folgenden älteren Entwicklungsnotizen sind teilweise historisch.
+> Aktuelle Bedienung, Grenzen und gezielte Checks: [PNG-Export](docs/marktstand-png.md).
+
 # TimberArt Design – Testversion
 
 Separate Vorschau aus `heinzwilhelm84-WIL/timberart-design`, Branch

@@ -1,3 +1,5 @@
+> Historischer Bericht zu PR #18. Die Versandoberfläche und deren Code/Tests wurden im Marktstand-Modus entfernt. Aktuell gilt [PNG-Export](marktstand-png.md).
+
 # Unverbindliche Designanfrage an TimberArt
 
 Stand: 21. Oktober 2026 (Europe/Zurich). Basis: main nach PR #17,

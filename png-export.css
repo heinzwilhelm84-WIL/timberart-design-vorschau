@@ -1,0 +1,13 @@
+.png-dialog { width:min(760px,calc(100% - 24px)); max-height:calc(100dvh - 24px); overflow:auto; border:1px solid var(--line); border-radius:20px; padding:24px; color:var(--ink); background:#F6F2EA; }
+.png-dialog::backdrop { background:#29282099; }
+.png-dialog h2 { font-family:Georgia,serif; margin:8px 0 16px; }
+.png-dialog p { line-height:1.6; font-size:14px; overflow-wrap:anywhere; }
+.png-dialog .png-close { float:right; min-width:48px; min-height:48px; }
+.png-preview { display:block; width:100%; max-height:460px; object-fit:contain; background:white; }
+.png-download { display:inline-flex; justify-content:center; margin:12px 0; min-height:48px; text-decoration:none; }
+.png-warnings { color:#792f15; }
+.png-dialog [hidden] { display:none!important; }
+.inquiry-export-host { position:fixed; left:-10000px; top:0; width:600px; pointer-events:none; }
+.inquiry-export-host .composition { width:600px; max-width:none; }
+.inquiry-export-host .design-plane { transform:none; }
+@media(max-width:600px) { .png-dialog { padding:16px; } .png-download { width:100%; box-sizing:border-box; } }
