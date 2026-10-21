@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TESTVERSION – TimberArt Design Studio</title>
     <meta name="robots" content="noindex, nofollow">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'none'; object-src 'none'; base-uri 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://formspree.io/f/xzebgwlg; form-action 'none'; object-src 'none'; base-uri 'self'">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Bebas+Neue&family=Oswald:wght@400;600&family=Libre+Franklin:wght@400;600&family=Braah+One&family=Lilita+One&family=Playfair+Display:wght@400;600&family=Great+Vibes&family=Lobster&family=Bona+Nova:wght@400;600&family=Boogaloo&family=Pacifico&family=Roboto+Slab:wght@400;600&family=Fredoka:wght@400;600&family=Bubblegum+Sans&family=Lily+Script+One&family=Limelight&family=Libre+Caslon+Text&family=Anton&family=Cinzel:wght@400;600&family=Cinzel+Decorative&family=Permanent+Marker&family=Special+Elite&family=Rye&family=Alfa+Slab+One&family=Black+Ops+One&family=Poppins:wght@400;600&family=Raleway:wght@400;600&family=League+Spartan:wght@400;600&family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -58,9 +58,10 @@
     <link rel="stylesheet" href="studio.css">
     <link rel="stylesheet" href="text-frame.css">
     <link rel="stylesheet" href="atelier.css">
+    <link rel="stylesheet" href="design-inquiry.css">
 </head>
 <body>
-    <aside class="preview-banner" aria-label="Testversion"><strong>TESTVERSION · Unverbindliche Vorschau</strong><span>Keine echten Bestellungen. Formulare werden nur lokal getestet; es werden keine Bestelldaten übermittelt.</span></aside>
+    <aside class="preview-banner" aria-label="Testversion"><strong>TESTVERSION · Unverbindliche Vorschau</strong><span>Keine Bestellungen. Designanfragen können bewusst über Formspree an TimberArt gesendet werden; Testbestellformulare bleiben deaktiviert.</span></aside>
     <noscript><p class="preview-form-note">TESTVERSION: Bestellungen sind deaktiviert. Für die Vorschau bitte JavaScript aktivieren.</p></noscript>
     <a class="skip-link" href="#content">Zum Inhalt</a>
     <header class="studio-header">
@@ -82,6 +83,7 @@
             <h2 id="modalTitle" style="font-size: 20px; margin-bottom: 0.5rem;"></h2>
             <p id="modalCategory" style="font-size: 12px; color: #666; margin-bottom: 1.5rem;"></p>
             <button class="action primary" onclick="personalStart(selectedDesign.id)">Personalisieren</button>
+            <button type="button" class="action" data-inquiry="motif">Design an TimberArt senden</button>
             <button class="btn-primary" onclick="closeImageModal(); setTimeout(() => openDesignOrderForm(), 100)">Testbestellung ausprobieren</button>
         </div>
     </div>
@@ -248,5 +250,7 @@
     <script src="transform.js"></script>
     <script src="text-frame.js"></script>
     <script src="personal.js"></script>
+    <script src="design-export.js"></script>
+    <script src="design-inquiry.js"></script>
 </body>
 </html>

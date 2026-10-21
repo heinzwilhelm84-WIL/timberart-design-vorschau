@@ -4,10 +4,12 @@ Separate Vorschau aus `heinzwilhelm84-WIL/timberart-design`, Branch
 `design/phase-1-geschenkstudio`, Quellcommit `5ad3ec35dea1b5576ce2b7a4f74c4d2e1077d491`.
 
 - Deutliche Kennzeichnung als Testversion; keine echten Bestellungen.
-- Beide Formulare testen ausschliesslich lokal. Kein Formspree-Endpunkt oder Bestellversand.
-- Content Security Policy blockiert Formularübermittlungen und externe JavaScript-Netzwerkanfragen.
-- Google-API-Schlüssel und Formspree-Konfiguration wurden entfernt.
-- `catalog.json` enthält eine Momentaufnahme von 412 Motiven in 9 Kategorien.
+- Die beiden bisherigen Testbestellformulare bleiben ausschliesslich lokal und senden nichts.
+- Die separate Funktion **„Design an TimberArt senden“** versendet nach bewusstem Absenden eine unverbindliche Designanfrage über den vorhandenen Formspree-Endpunkt. Kein Bestell- oder Zahlungsprozess. PNG/SVG/JSON bleiben lokale Downloads; keine Dateianhänge.
+- Die CSP sperrt native Formularübermittlungen weiterhin vollständig. Nur der konkrete Anfrage-Endpunkt ist zusätzlich für Fetch freigegeben; andere externe API-Ziele bleiben gesperrt.
+- Keine Google-Zugangsdaten oder privaten Schlüssel im Browser. Die öffentliche Formspree-Formularadresse ist keine Zugangsinformation.
+- Versanddaten, Exportgrenzen, simulierte Prüfungen und Voraussetzungen für einen separat freigegebenen Live-Test: [docs/designanfrage-versand.md](docs/designanfrage-versand.md).
+- `catalog.json` enthält den aktuellen Motivbestand; Kategorien stehen in `data/categories.json`.
   Alle Motivbilder kommen lokal aus `assets/motifs/`; Schriften von Google Fonts.
 - Keine ursprüngliche Git-Historie übernommen. Das Quellrepository bleibt unverändert.
 - Dieser Entwicklungsbranch ändert keine Pages-Einstellungen und enthält keine Deployment-Workflows.
@@ -16,10 +18,11 @@ Lokal ansehen: `python3 -m http.server 8000`, dann http://localhost:8000 öffnen
 
 ## Personalisierung und Designmappe
 
-Lokale Weiterentwicklung auf `feature/textmodell-v3`: Neue Entwürfe mit unabhängig
-einstellbarer Rahmenbreite/-höhe, Schriftgrösse und Textausrichtung. Acht Eck-/
-Seitengriffe erlauben die direkte Rahmenänderung mit Maus und Finger, auch gedreht. Alte Layouts
-bleiben lesbar und werden nicht automatisch migriert. Noch kein Push/Deployment.
+Textmodell v3 mit unabhängig einstellbarer Rahmenbreite/-höhe, gewünschter
+maximaler Schriftgrösse und Textausrichtung. Vier Eckgriffe und ein separater
+Drehgriff erlauben die direkte Bearbeitung mit Maus und Finger. Die sichtbare
+Schrift passt sich bei Platzmangel an; gespeicherte Rahmen und Maximalgrösse
+bleiben erhalten. Alte Layouts bleiben lesbar und werden nicht automatisch migriert.
 Bedienung, Speicherversionen, Grenzen und Prüfbericht: [docs/text-model-v3.md](docs/text-model-v3.md).
 
 Auf Branch `feature/personalisierung-designmappe`: Motiv öffnen und
