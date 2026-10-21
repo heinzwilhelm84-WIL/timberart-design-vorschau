@@ -4,9 +4,11 @@ from playwright.sync_api import sync_playwright
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 CAT=json.loads((ROOT/'catalog.json').read_text());BASE=json.loads((ROOT/'data/motifs-baseline.json').read_text())['motifs']
 assert [{k:d[k] for k in ['id','name','category']} for d in CAT[:len(BASE)]]==BASE
-assert len(CAT)==412 and len({d['category'] for d in CAT})==9
+assert len({d['id'] for d in CAT})==len(CAT) and len(CAT)>=len(BASE)
+CATEGORIES=json.loads((ROOT/'data/categories.json').read_text())['categories']
+assert {d['category'] for d in CAT} <= {c['key'] for c in CATEGORIES}
 PATHS=[v['url'] for d in CAT for v in d['images']]
-assert len(PATHS)==824 and len(set(PATHS))==824
+assert len(PATHS)==2*len(CAT) and len(set(PATHS))==len(PATHS)
 class Quiet(http.server.SimpleHTTPRequestHandler):
  def log_message(self,*args):pass
  def translate_path(self,path):
@@ -33,8 +35,8 @@ with sync_playwright() as p:
      const image=new Image();image.src=path;await image.decode();if(!image.naturalWidth)throw Error('decode');loaded++;
     }catch(error){failures.push(path+': '+error.message)}}}));return {loaded,failures};
    }''',PATHS)
-   assert result=={'loaded':824,'failures':[]},result
-   print('PASS: all 824 WebP files HTTP 200, image/webp and Chromium decode under project subpath')
+   assert result=={'loaded':len(PATHS),'failures':[]},result
+   print(f'PASS: all {len(PATHS)} referenced WebP files HTTP 200, image/webp and Chromium decode under project subpath')
   # Restore stored IDs and both legacy and transformed designs without migration/reset.
   now='2026-10-19T12:00:00.000Z'
   common={'motifId':CAT[0]['id'],'motifName':CAT[0]['name'],'category':CAT[0]['category'],'text':'Für Anna ♥','fontId':'pacifico','createdAt':now,'updatedAt':now}
@@ -49,7 +51,7 @@ with sync_playwright() as p:
    page.eval_on_selector_all(selector,"els=>els.forEach(el=>el.loading='eager')")
    page.wait_for_function('''selector=>{const imgs=[...document.querySelectorAll(selector)];return imgs.length>0&&imgs.every(i=>i.complete&&i.naturalWidth>0&&i.currentSrc.includes('/timberart-design-vorschau/assets/motifs/')&&i.currentSrc.endsWith('.webp'))}''',arg=selector,timeout=30000)
   loaded('.hero img[data-motif-id]' if page.locator('.hero img[data-motif-id]').count() else '#content img[data-motif-id]')
-  page.locator('[data-view="motifs"]').click();assert page.locator('[data-design]').count()==412
+  page.locator('[data-view="motifs"]').click();assert page.locator('[data-design]').count()==len(CAT)
   loaded('[data-design] img')
   page.locator('[data-design]').first.click();loaded('#modalImage')
   page.locator('#imageModal .btn-primary').click()

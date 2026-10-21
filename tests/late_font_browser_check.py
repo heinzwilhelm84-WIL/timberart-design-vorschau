@@ -1,4 +1,4 @@
-"""Controlled local font metrics after the real four-second UI timeout."""
+"""Late font changes at the minimum size: overflow must still appear and clear."""
 import functools,http.server,os,pathlib,shutil,threading
 from playwright.sync_api import sync_playwright
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -20,7 +20,7 @@ with sync_playwright() as p:
     text=('iiiiiiiiii '*10 if grows else 'WWWWWWWWWW '*5)+'\n'
     page.locator('#wishText').fill(text)
     def field(k,v):page.locator('#frame-'+k).fill(str(v));page.locator('#frame-'+k).press('Tab')
-    field('width',300);field('height',500);field('fontSize',30);field('y',300)
+    field('width',300);field('height',500);field('fontSize',8);field('y',300)
     page.evaluate('''async bytes=>{const f=await new FontFace('ReviewProbe',new Uint8Array(bytes)).load();document.fonts.add(f)}''',FONT_BYTES)
     heights=page.locator('.frame-text').evaluate("e=>{const normal=e.scrollHeight,old=e.style.fontFamily;e.style.fontFamily='ReviewProbe';const loaded=e.scrollHeight;e.style.fontFamily=old;return {normal,loaded}}")
     assert (heights['loaded']>heights['normal'])==grows,heights
@@ -55,5 +55,41 @@ with sync_playwright() as p:
  page.wait_for_function('() => fontEvents>0 && document.getElementById("fontStatus").textContent===""')
  assert not errors,errors;ctx.close()
  print('PASS: real FontFaceSet loadingdone after initially absent font updates editor status',flush=True)
+ # Above-minimum auto-fit must shrink AND grow on late font completion in all views.
+ for view in ['editor','map']:
+  for grows in [True,False]:
+   ctx=browser.new_context(viewport={'width':1440,'height':1000});ctx.route('https://**/*',lambda r:r.abort())
+   page=ctx.new_page();errors=[];posts=[];page.on('pageerror',lambda e:errors.append(str(e)))
+   page.on('request',lambda r:posts.append(r.url) if r.method!='GET' else None)
+   page.goto(URL);page.wait_for_function('() => studio.ready');page.locator('[data-view="motifs"]').click()
+   page.locator('[data-design]').first.click();page.get_by_role('button',name='Personalisieren',exact=True).click()
+   page.locator('#wishText').fill(('iiiiiiiiii '*10 if grows else 'WWWWWWWWWW '*5)+'\n')
+   for k,v in [('x',300),('y',300),('width',300),('height',500),('fontSize',30)]:
+    page.locator('#frame-'+k).fill(str(v));page.locator('#frame-'+k).press('Tab')
+   page.evaluate("""async bytes=>{const f=await new FontFace('ReviewProbe',new Uint8Array(bytes)).load();document.fonts.add(f)}""",FONT_BYTES)
+   heights=page.locator('.frame-text').evaluate("e=>{const normal=e.scrollHeight,old=e.style.fontFamily;e.style.fontFamily='ReviewProbe';const loaded=e.scrollHeight;e.style.fontFamily=old;return {normal,loaded}}")
+   assert (heights['loaded']>heights['normal'])==grows
+   page.locator('#frame-height').fill(str((heights['normal']+heights['loaded'])/2+24));page.locator('#frame-height').press('Tab')
+   if view=='map':
+    page.locator('#saveDraft').click();page.wait_for_selector('[data-edit]');page.locator('[data-duplicate]').click()
+    page.wait_for_function('() => personal.drafts.length===2')
+    for box in page.locator('[data-compare]').all():box.check()
+    page.locator('#compareDrafts').click()
+   before=page.evaluate('JSON.stringify({drafts:personal.drafts,current:personal.current,raw:localStorage.getItem(MAP_KEY)})')
+   size=page.locator('.design-surface').first.get_attribute('data-effective-font-size')
+   page.evaluate("() => {window.realLoad=document.fonts.load.bind(document.fonts);window.resolvers=[];document.fonts.load=()=>new Promise(resolve=>resolvers.push(resolve));}")
+   page.evaluate('personalUpdate()' if view=='editor' else 'mapFontStatus()');status='fontStatus' if view=='editor' else 'mapFontStatus'
+   page.wait_for_function('id => /lädt noch|laden noch/.test(document.getElementById(id).textContent)',arg=status,timeout=9000)
+   page.evaluate("""async bytes=>{const f=await new FontFace('Montserrat',new Uint8Array(bytes)).load();document.fonts.add(f);document.fonts.load=window.realLoad;resolvers.forEach(resolve=>resolve([f]));}""",FONT_BYTES)
+   page.wait_for_function('id => document.getElementById(id).textContent===""',arg=status)
+   sizes=page.locator('.design-surface').evaluate_all('es=>es.map(s=>Number(s.dataset.effectiveFontSize))')
+   assert len(sizes)==(1 if view=='editor' else 4) and len(set(sizes))==1
+   assert (sizes[0]<float(size) if grows else sizes[0]>float(size)), (view,grows,size,sizes)
+   assert sizes[0]<=30
+   assert page.locator('.frame-warning:visible').count()==0
+   assert page.evaluate('JSON.stringify({drafts:personal.drafts,current:personal.current,raw:localStorage.getItem(MAP_KEY)})')==before
+   assert not errors and not posts
+   print(f'PASS late font auto-fit {view} {"shrinks" if grows else "grows"}: all visible editor/cards/comparison resized after >4s, requested maximum/model/storage unchanged',flush=True)
+   ctx.close()
  browser.close()
 server.shutdown()

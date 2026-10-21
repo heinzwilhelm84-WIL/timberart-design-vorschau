@@ -53,18 +53,27 @@ with sync_playwright() as p:
   assert not errors,errors
   context.close()
   print('PASS',width,'px: both filled forms; repeat submit; zero form requests; zero fetch/XHR/beacon; native submit blocked by CSP')
- # Verify native fallback also when app JavaScript is disabled.
- context=browser.new_context(java_script_enabled=False);page=context.new_page();requests=[];blocked_console=[]
- page.on('console',lambda msg:blocked_console.append(msg.text) if 'form-action' in msg.text else None)
- page.on('request',lambda r:requests.append((r.method,r.url,r.post_data or '')))
- context.route('https://**/*',lambda route:route.abort());page.goto(url,wait_until='networkidle')
- initial=len(requests)
- page.evaluate("() => {window.blocks=0;document.addEventListener('securitypolicyviolation',e=>{if(e.effectiveDirective==='form-action')window.blocks++})}")
- for index,formid in enumerate(['orderForm','designOrderForm'],1):
-  page.evaluate("id => {const f=document.getElementById(id);f.querySelector('[name=name]').value='ORDER_SAFETY_SENTINEL';HTMLFormElement.prototype.submit.call(f)}",formid)
-  page.wait_for_timeout(100)
-  assert len(blocked_console)>=index,blocked_console
- assert requests[initial:]==[]
- print('PASS: both native forms blocked with application JavaScript disabled')
+ # With scripts disabled, page.evaluate(function) cannot reliably invoke page code.
+ # Click the actual original native form controls in an isolated no-script fixture.
+ import re
+ source=(pathlib.Path(ROOT)/'index.html').read_text()
+ csp=re.search(r'<meta http-equiv="Content-Security-Policy"[^>]+>',source).group()
+ forms=re.findall(r'<form\b.*?</form>',source,re.S)
+ assert len(forms)==2 and "form-action 'none'" in csp
+ context=browser.new_context(java_script_enabled=False)
+ context.route('https://**/*',lambda route:route.abort())
+ context.route('**/native-test.html',lambda r:r.fulfill(body='<html><head>'+csp+'</head><body>'+''.join(forms)+'</body></html>',content_type='text/html'))
+ for formid in ['orderForm','designOrderForm']:
+  page=context.new_page();requests=[]
+  page.on('request',lambda r:requests.append((r.method,r.url,r.post_data or '')))
+  page.goto(url+'/native-test.html');initial=len(requests)
+  page.locator('#'+formid+' [name="name"]').fill('ORDER_SAFETY_SENTINEL')
+  page.locator('#'+formid+' [name="email"]').fill('safety@example.invalid')
+  page.locator('#'+formid+' button[type="submit"]').click(no_wait_after=True)
+  page.wait_for_timeout(250)
+  assert requests[initial:]==[]
+  assert page.url==url+'/native-test.html'
+  page.close()  # Chromium leaves a blocked native navigation pending; isolate the next form.
+ print('PASS: actual native clicks on both original forms blocked by original CSP with JavaScript disabled')
  context.close();browser.close()
 server.shutdown()

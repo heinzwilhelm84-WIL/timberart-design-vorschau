@@ -187,7 +187,16 @@
         function changeCategory(btn, cat) { document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active")); btn.classList.add("active"); loadContent(cat); }
         async function loadLogo() { /* Preview uses the existing vector brand; no API credentials required. */ }
         async function loadContent(category) { const content = document.getElementById("content"); if (category === "all") { content.innerHTML = '<div class="loading"><span class="spinner"></span>Lade Inhalte...</div>'; await loadAllDesigns(); renderAllDesigns(); } else if (category === "schriften") { renderFonts(); } else if (category === "favorites") { renderFavorites(); } else if (allCategories.includes(category)) { content.innerHTML = '<div class="loading"><span class="spinner"></span>Lade Designs...</div>'; await loadCategoryDesigns(category); renderCategory(category); } }
-        async function loadAllDesigns() { try { const response = await fetch('./catalog.json'); if (!response.ok) throw new Error('Catalog unavailable'); allDesigns = await response.json(); } catch (e) { console.log('Preview catalog unavailable'); allDesigns = []; } }
+        async function loadAllDesigns() {
+            try {
+                const response = await fetch('./catalog.json');
+                if (!response.ok) throw new Error('Catalog unavailable');
+                const data = await response.json();
+                if (!Array.isArray(data) || !data.every(d => d && typeof d.id === 'string' && d.id && typeof d.name === 'string' && typeof d.category === 'string') || new Set(data.map(d => d.id)).size !== data.length) throw new Error('Invalid catalog');
+                allDesigns = data;
+                return true;
+            } catch (_) { allDesigns = []; return false; }
+        }
         async function loadCategoryDesigns(categoryName) { await loadAllDesigns(); allDesigns = allDesigns.filter(d => d.category === categoryName); }
 
         function renderAllDesigns() { const content = document.getElementById("content"); let html = `<h2 class="category-title">Alle Designs</h2><div class="grid-5">`; allDesigns.forEach(item => html += renderDesignCard(item)); html += `</div>`; html += `<h2 class="category-title" style="margin-top: 3rem;">🔤 Verfügbare Schriften</h2><div class="grid-5">`; FONTS.forEach((font, i) => html += renderFontCard(font, i)); html += `</div>`; content.innerHTML = html; }
@@ -224,7 +233,14 @@
         function submitOrder(e) { previewOrder(e); }
         function submitDesignOrder(e) { previewOrder(e); }
         function loadFavorites() { const saved = localStorage.getItem("timberart-favorites"); favorites = saved ? JSON.parse(saved) : []; }
-        function toggleFavorite(e, id) { e.stopPropagation(); favorites = favorites.includes(id) ? favorites.filter(f => f !== id) : [...favorites, id]; localStorage.setItem("timberart-favorites", JSON.stringify(favorites)); }
+        function toggleFavorite(e, id) {
+            e.stopPropagation();
+            const next = favorites.includes(id) ? favorites.filter(f => f !== id) : [...favorites, id];
+            try { localStorage.setItem("timberart-favorites", JSON.stringify(next)); }
+            catch (_) { personalNotice('Favorit nicht gespeichert: Der Browserspeicher ist voll oder nicht verfügbar. Die bisherige Auswahl bleibt erhalten.'); return false; }
+            favorites = next;
+            return true;
+        }
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeImageModal(); closeDesignOrderForm(); closeModal(); } });
     </script>
     <script src="motif-images.js"></script>

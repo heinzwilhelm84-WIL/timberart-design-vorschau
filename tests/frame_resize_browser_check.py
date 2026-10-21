@@ -24,9 +24,13 @@ with sync_playwright() as p:
   def center(selector):
    b=page.locator(selector).bounding_box();return (b['x']+b['width']/2,b['y']+b['height']/2)
   def select():
-   scroll();x,y=center('.frame-v3-object')
-   if touch:page.touchscreen.tap(x,y)
-   else:page.mouse.click(x,y)
+   scroll()
+   # Locator actions wait for stable, hittable geometry. Raw coordinate taps could
+   # hit the empty canvas while focus/scroll from the previous number input settled.
+   text=page.locator('.frame-v3-object')
+   if touch:text.tap()
+   else:text.click()
+   page.locator('.resize-handle').first.wait_for(state='visible')
   def drag(start,end,cancel=False,live=None):
    if touch:
     c=ctx.new_cdp_session(page);c.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':start[0],'y':start[1],'id':1}]})
@@ -99,12 +103,13 @@ with sync_playwright() as p:
    assert page.locator('.frame-v3-object').evaluate("e=>getComputedStyle(e).outlineStyle")=='dashed'
    for handle in handles:
     start=center(f'[data-frame-handle="{handle}"]');assert page.evaluate('p=>document.elementFromPoint(...p).closest("[data-frame-handle]")?.dataset.frameHandle',list(start))==handle,(width,x,y,handle)
-  # Shrinking height visibly warns; growing again clears the warning, with full text.
+  # Shrinking height adapts the effective font; growing restores the maximum.
   configure(x=300,y=300,width=300,height=200,rotation=0,fontSize=26)
   page.locator('#wishText').fill('Erste Zeile\nZweite Zeile');select()
   assert page.locator('.frame-warning').is_hidden()
   b=page.locator('#designSurface').bounding_box();scale=b['width']/600;start=center('[data-frame-handle="se"]')
-  drag(start,(start[0],start[1]-150*scale));assert page.locator('.frame-warning').is_visible()
+  drag(start,(start[0],start[1]-150*scale));assert float(page.locator('.design-surface').get_attribute('data-effective-font-size'))<26
+  assert model()['fontSize']==26 and page.locator('.frame-warning').is_hidden()
   start=center('[data-frame-handle="se"]');drag(start,(start[0],start[1]+150*scale));assert page.locator('.frame-warning').is_hidden()
   page.locator('#wishText').fill(raw);configure(fontSize=34)
   # Keyboard resize, saved geometry, reload and identical map/compare rendering.

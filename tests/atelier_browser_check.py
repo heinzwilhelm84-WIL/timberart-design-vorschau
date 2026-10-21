@@ -3,6 +3,8 @@ import functools, http.server, json, os, pathlib, shutil, threading
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+CATALOG = json.loads((ROOT/'catalog.json').read_text())
+CATEGORIES = {c['key'] for c in json.loads((ROOT/'data/categories.json').read_text())['categories']} | {m['category'] for m in CATALOG}
 SCREENSHOTS = os.environ.get('TIMBERART_REDESIGN_SCREENSHOTS')
 if SCREENSHOTS:
  pathlib.Path(SCREENSHOTS).mkdir(parents=True, exist_ok=True)
@@ -29,8 +31,8 @@ with sync_playwright() as p:
     page.evaluate("window.scrollTo({top:0,behavior:'instant'})")
     page.screenshot(path=str(pathlib.Path(SCREENSHOTS) / f'{name}-{width}.png'), full_page=True, animations='disabled')
   assert page.locator('#welcomeTitle').inner_text().replace('\n', ' ') == 'Gestalte dein persönliches Unikat.'
-  assert page.locator('[data-category]').count() == 9
-  assert page.evaluate('studio.catalog.length === 412 && FONTS.length === 30')
+  assert page.locator('[data-category]').count() == len(CATEGORIES)
+  assert page.evaluate('studio.catalog') == CATALOG and page.evaluate('FONTS.length') == 30
   assert page.evaluate('getComputedStyle(document.body).backgroundColor') == 'rgb(246, 242, 234)'
   assert page.locator('.brand-logo,.footer-logo').count() == 2
   page.wait_for_function('() => [...document.querySelectorAll(".brand-logo,.footer-logo")].every(i => i.complete && i.naturalWidth > 0)')
@@ -42,7 +44,7 @@ with sync_playwright() as p:
   for nav_button in page.locator('.studio-header button').all():
    assert nav_button.bounding_box()['height'] >= 48
   page.get_by_role('button', name='Jetzt gestalten', exact=False).click()
-  assert page.locator('[data-design]').count() == 412
+  assert page.locator('[data-design]').count() == len(CATALOG)
   page.locator('#motifSearch').fill('Hirsch'); assert page.locator('[data-design]').count() > 0
   page.locator('#motifSearch').fill(''); page.locator('[data-favorite]').first.click()
   nav('favorites'); assert page.locator('[data-design]').count() == 1
@@ -79,7 +81,7 @@ with sync_playwright() as p:
   assert not page.locator('a[href*="checkout"],a[href*="login"],form[action]').count()
   assert not errors, errors
   assert not posts, posts
-  print(f'PASS {width}px: original local logo; cream/bronze theme; nine categories; direct design entry; search/favorites; white previews; four grips; save/reopen/map/compare; 30 fonts; touch targets; no overflow/errors/POSTs', flush=True)
+  print(f'PASS {width}px: original local logo; cream/bronze theme; {len(CATEGORIES)} categories; direct design entry; search/favorites; white previews; four grips; save/reopen/map/compare; 30 fonts; touch targets; no overflow/errors/POSTs', flush=True)
   ctx.close()
  browser.close()
 server.shutdown()

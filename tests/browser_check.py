@@ -3,7 +3,7 @@ from playwright.sync_api import sync_playwright
 ROOT=str(pathlib.Path(__file__).resolve().parents[1])
 EXPECTED=json.loads((pathlib.Path(ROOT)/'catalog.json').read_text())
 EXPECTED_COUNT=len(EXPECTED)
-EXPECTED_CATEGORIES=len({item['category'] for item in EXPECTED})
+EXPECTED_CATEGORIES=len({item['category'] for item in EXPECTED} | {c['key'] for c in json.loads((pathlib.Path(ROOT)/'data/categories.json').read_text())['categories']})
 SCREENSHOTS=os.environ.get('TIMBERART_TEST_SCREENSHOTS')
 if SCREENSHOTS:pathlib.Path(SCREENSHOTS).mkdir(parents=True,exist_ok=True)
 class Quiet(http.server.SimpleHTTPRequestHandler):

@@ -196,12 +196,15 @@ function personalPick() {
     studioNavigate('motifs');
     personalNotice('Wähle ein Motiv, öffne es und tippe auf „Personalisieren“. Dein Text und deine Schrift bleiben erhalten.');
 }
+function personalMissingMotif(d) {
+    return `<p class="asset-warning" role="status">${d.motifId ? 'Das gespeicherte Motiv ist derzeit nicht im Katalog verfügbar. Text, Motivzuordnung und Einstellungen bleiben erhalten. Bitte Katalogverbindung prüfen oder bewusst ein anderes Motiv wählen.' : 'Bitte ein Motiv auswählen.'}</p>`;
+}
 function personalPreview(d, full = false, editable = false) {
     if (d.layoutVersion === 3) return framePreview(d, full, editable);
     if (d.layoutVersion === 2) return transformPreview(d, full, editable);
     const motif = studio.catalog.find(m => m.id === d.motifId);
     const font = personalFont(d.fontId);
-    return `<div class="composition ${full ? 'composition-large' : ''}">${motif ? `${motifImageTag(motif, {detail:full, sizes:full ? "(max-width:760px) 75vw, 40vw" : "(max-width:760px) 75vw, 28vw"})}<span class="asset-warning" hidden>Motivbild nicht erreichbar. Die Auswahl bleibt gespeichert.</span>` : '<p class="asset-warning">Bitte ein Motiv auswählen.</p>'}<div class="composition-text" tabindex="0" role="region" aria-label="Wunschtextvorschau, bei langen Texten scrollbar" style="font-family:${studioEscape(font.family)}">${studioEscape(d.text || 'Dein Wunschtext')}</div></div>`;
+    return `<div class="composition ${full ? 'composition-large' : ''}">${motif ? `${motifImageTag(motif, {detail:full, sizes:full ? "(max-width:760px) 75vw, 40vw" : "(max-width:760px) 75vw, 28vw"})}<span class="asset-warning" hidden>Motivbild nicht erreichbar. Die Auswahl bleibt gespeichert.</span>` : personalMissingMotif(d)}<div class="composition-text" tabindex="0" role="region" aria-label="Wunschtextvorschau, bei langen Texten scrollbar" style="font-family:${studioEscape(font.family)}">${studioEscape(d.text || 'Dein Wunschtext')}</div></div>`;
 }
 function personalImages() {
     transformMount();

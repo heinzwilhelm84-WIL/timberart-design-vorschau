@@ -77,11 +77,11 @@ function framePlaceTools(surface,f) {
 }
 function framePreview(d, full, editable) {
     const f = copyTextFrame(d.textFrame), motif = studio.catalog.find(m => m.id === d.motifId);
-    return `<div class="composition transform-composition frame-v3 ${full ? 'composition-large' : ''}"><div class="design-surface ${editable ? 'design-editable' : ''}" data-frame="${studioEscape(JSON.stringify(f))}" ${editable ? 'id="designSurface" aria-label="Gestaltungsfläche für deinen Wunschtext"' : 'role="group" aria-label="Motiv mit gestaltetem Wunschtext"'}><div class="design-plane">${motif ? `${motifImageTag(motif, {className:'motif-image', detail:full, sizes:full ? '(max-width:760px) 70vw, 38vw' : '(max-width:760px) 70vw, 24vw'})}<span class="asset-warning" hidden>Motivbild nicht erreichbar. Die Auswahl bleibt gespeichert.</span>` : '<p class="asset-warning">Bitte ein Motiv auswählen.</p>'}<div class="design-text-object frame-v3-object" ${editable ? 'tabindex="0" data-transform-action="move" role="button" aria-pressed="false" aria-label="Text auswählen und verschieben. Pfeiltasten bewegen."' : ''}><div class="frame-text-viewport"><div class="composition-text frame-text" style="font-family:${studioEscape(personalFont(d.fontId).family)}"><span class="frame-text-content">${studioEscape(d.text || 'Dein Wunschtext')}</span></div></div></div></div>${editable ? frameTools() : ''}</div><p class="frame-warning" role="status" hidden></p></div>`;
+    return `<div class="composition transform-composition frame-v3 ${full ? 'composition-large' : ''}"><div class="design-surface ${editable ? 'design-editable' : ''}" data-frame="${studioEscape(JSON.stringify(f))}" ${editable ? 'id="designSurface" aria-label="Gestaltungsfläche für deinen Wunschtext"' : 'role="group" aria-label="Motiv mit gestaltetem Wunschtext"'}><div class="design-plane">${motif ? `${motifImageTag(motif, {className:'motif-image', detail:full, sizes:full ? '(max-width:760px) 70vw, 38vw' : '(max-width:760px) 70vw, 24vw'})}<span class="asset-warning" hidden>Motivbild nicht erreichbar. Die Auswahl bleibt gespeichert.</span>` : personalMissingMotif(d)}<div class="design-text-object frame-v3-object" ${editable ? 'tabindex="0" data-transform-action="move" role="button" aria-pressed="false" aria-label="Text auswählen und verschieben. Pfeiltasten bewegen."' : ''}><div class="frame-text-viewport"><div class="composition-text frame-text" style="font-family:${studioEscape(personalFont(d.fontId).family)}"><span class="frame-text-content">${studioEscape(d.text || 'Dein Wunschtext')}</span></div></div></div></div>${editable ? frameTools() : ''}</div><p class="frame-fit-status personal-help" role="status" hidden></p><p class="frame-warning" role="status" hidden></p></div>`;
 }
 function frameControls() {
-    const fields = [['width','Rahmenbreite'],['height','Rahmenhöhe'],['fontSize','Schriftgrösse'],['x','Position horizontal'],['y','Position vertikal'],['rotation','Drehung (Grad)']];
-    return `<fieldset class="frame-controls"><legend>Textrahmen</legend><p>Breite, Höhe und Schriftgrösse sind unabhängig. Werte beziehen sich auf die 600 × 600 grosse Vorschau, nicht auf Millimeter. Text auswählen, dann verschieben oder über die vier Eckgriffe den Rahmen ändern. ↻ dreht den Text. Bei kleinen Rahmen liegen die Griffe mit Verbindungslinien weiter aussen. Auch die Eingabefelder bleiben verfügbar.</p><div class="frame-fields">${fields.map(([key,label]) => `<label for="frame-${key}">${label}<input id="frame-${key}" data-frame-field="${key}" type="number" min="${FRAME_LIMITS[key][0]}" max="${FRAME_LIMITS[key][1]}" step="0.1" inputmode="decimal"></label>`).join('')}</div><label for="frame-align">Textausrichtung<select id="frame-align"><option value="left">Linksbündig</option><option value="center">Zentriert</option><option value="right">Rechtsbündig</option></select></label><p class="frame-control-error" role="status"></p></fieldset>`;
+    const fields = [['width','Rahmenbreite'],['height','Rahmenhöhe'],['fontSize','Maximale Schriftgrösse'],['x','Position horizontal'],['y','Position vertikal'],['rotation','Drehung (Grad)']];
+    return `<fieldset class="frame-controls"><legend>Textrahmen</legend><p>Breite und Höhe bestimmen den Rahmen. Die eingestellte Schriftgrösse ist das Maximum: Bei Platzmangel wird der Text automatisch kleiner und wächst bei mehr Platz wieder bis zu diesem Wert. Die Rahmenabmessungen bleiben unverändert. Werte beziehen sich auf die 600 × 600 grosse Vorschau, nicht auf Millimeter. Text auswählen, dann verschieben oder über die vier Eckgriffe den Rahmen ändern. ↻ dreht den Text. Bei kleinen Rahmen liegen die Griffe mit Verbindungslinien weiter aussen. Auch die Eingabefelder bleiben verfügbar.</p><div class="frame-fields">${fields.map(([key,label]) => `<label for="frame-${key}">${label}<input id="frame-${key}" data-frame-field="${key}" type="number" min="${FRAME_LIMITS[key][0]}" max="${FRAME_LIMITS[key][1]}" step="0.1" inputmode="decimal"></label>`).join('')}</div><label for="frame-align">Textausrichtung<select id="frame-align"><option value="left">Linksbündig</option><option value="center">Zentriert</option><option value="right">Rechtsbündig</option></select></label><p class="frame-control-error" role="status"></p></fieldset>`;
 }
 function frameSet(changes) {
     if (personal.current?.layoutVersion !== 3 || studio.view !== 'editor') return false;
@@ -129,13 +129,42 @@ function frameSync(surface) {
     }
     frameCheck(surface, f);
 }
-function frameCheck(surface, f = JSON.parse(surface.dataset.frame)) {
+// Effective size is derived from the v3 maximum and measured layout, never stored
+// as another scale. All views use the same 600-unit design plane and inner width.
+function frameFitText(surface, f) {
     const viewport = surface.querySelector('.frame-text-viewport'), text = surface.querySelector('.frame-text');
-    const overflow = text.scrollHeight > viewport.clientHeight + 1 || text.scrollWidth > viewport.clientWidth + 1;
+    const fits = size => {
+        text.style.fontSize = `${size}px`;
+        return text.scrollHeight <= viewport.clientHeight && text.scrollWidth <= viewport.clientWidth;
+    };
+    const maximum = f.fontSize, minimum = FRAME_LIMITS.fontSize[0];
+    let size = maximum;
+    if (!fits(maximum)) {
+        size = minimum;
+        if (fits(minimum)) {
+            // Bounded search in tenths of a design unit. Manual maximum is untouched.
+            let low = Math.round(minimum * 10), high = Math.floor(maximum * 10);
+            while (low < high) {
+                const mid = Math.ceil((low + high) / 2);
+                if (fits(mid / 10)) low = mid; else high = mid - 1;
+            }
+            size = low / 10;
+        }
+    }
+    const overflow = !fits(size);
+    surface.dataset.effectiveFontSize = String(size);
+    return { size, overflow, adjusted: size < maximum };
+}
+function frameCheck(surface, f = JSON.parse(surface.dataset.frame)) {
+    if (!surface.isConnected || !surface.clientWidth || !validTextFrame(f)) return;
+    const fit = frameFitText(surface, f);
     const b = frameBounds(f), outside = b.left < 0 || b.top < 0 || b.right > DESIGN_SIZE || b.bottom > DESIGN_SIZE;
+    const status = surface.parentElement.querySelector('.frame-fit-status');
+    status.hidden = !fit.adjusted;
+    status.textContent = fit.adjusted ? `Schrift automatisch angepasst: ${fit.size.toLocaleString('de-CH')} statt maximal ${f.fontSize.toLocaleString('de-CH')} Vorschau-Einheiten. Bitte Lesbarkeit prüfen.` : '';
     const warning = surface.parentElement.querySelector('.frame-warning');
-    warning.hidden = !overflow && !outside;
-    warning.textContent = [overflow ? 'Der Text passt nicht vollständig in den Rahmen. Rahmen vergrössern oder Schrift verkleinern.' : '', outside ? 'Der gedrehte Textrahmen ragt über die Gestaltungsfläche hinaus. Position oder Abmessungen prüfen.' : '', overflow || outside ? 'Der vollständige Wunschtext bleibt gespeichert. Keine Gravurfreigabe.' : ''].filter(Boolean).join(' ');
+    warning.hidden = !fit.overflow && !outside;
+    warning.textContent = [fit.overflow ? 'Der Text passt auch bei der kleinsten Schriftgrösse nicht vollständig in den Rahmen. Rahmen vergrössern oder Text aufteilen.' : '', outside ? 'Der gedrehte Textrahmen ragt über die Gestaltungsfläche hinaus. Position oder Abmessungen prüfen.' : '', fit.overflow || outside ? 'Der vollständige Wunschtext bleibt gespeichert. Keine Gravurfreigabe.' : ''].filter(Boolean).join(' ');
 }
 function frameRefreshChecks() {
     document.querySelectorAll('.frame-v3 .design-surface').forEach(surface => frameCheck(surface));
