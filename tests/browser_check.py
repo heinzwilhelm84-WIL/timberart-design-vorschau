@@ -79,24 +79,18 @@ with sync_playwright() as p:
  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert 'Nicht gespeichert' in page.locator('#editorError').inner_text();assert page.locator('#wishText').input_value()=='Nicht verlieren'
  page.evaluate('() => {Storage.prototype.setItem=window.originalSet;}')
  page.locator('#saveDraft').click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert drafts()[0]['text']=='Nicht verlieren'
- # Both legacy test order routes still send no data.
- nav('schriften');page.locator('[data-font="0"]').click();page.get_by_role('button',name='Diese Schrift auswählen').click()
- page.locator('#orderForm input[name="name"]').fill('Testkunde');page.locator('#orderForm button[type="submit"]').click()
- assert page.locator('#orderForm .preview-order-status').is_visible();page.evaluate('closeModal()')
- nav('motifs');page.locator('[data-design]').first.click();page.locator('#imageModal .btn-primary').click()
- page.locator('#designOrderForm input[name="name"]').fill('Testkunde');page.locator('#designOrderForm button[type="submit"]').click()
- assert page.locator('#designOrderForm .preview-order-status').is_visible();page.evaluate('closeDesignOrderForm()')
+ # Market stand: no customer forms or send routes remain.
+ assert page.locator('form,[data-inquiry]').count()==0
+ assert page.evaluate('typeof inquirySubmit')=='undefined'
  # Reset cancel, reset accept, no unrelated storage deletion, persistent reset.
  page.evaluate("localStorage.setItem('unrelated','keep')")
  dismiss();page.get_by_role('button',name='Neue Beratung',exact=True).click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft');assert len(drafts())==1
  accept();page.get_by_role('button',name='Neue Beratung',exact=True).click();page.wait_for_function('() => typeof mapWritesPending!=="undefined" && mapWritesPending===0 && !savingDraft')
  assert page.evaluate('personal.drafts.length===0 && favorites.length===0 && personal.current===null && selectedFont===null && selectedDesign===null')
- assert page.locator('#orderForm input[name="name"]').input_value()==''
- assert page.locator('#designOrderForm input[name="name"]').input_value()==''
  assert page.locator('#customText').input_value()==''
  assert page.evaluate("localStorage.getItem('unrelated')")=='keep'
  page.reload();ready();assert drafts()==[] and page.evaluate('favorites.length')==0
- print('PASS: delete confirmation; storage failure; both test orders; reset cancelled/confirmed; form privacy; reset survives reload; unrelated browser data retained')
+ print('PASS: delete confirmation; storage failure; no order forms; reset cancelled/confirmed; reset survives reload; unrelated browser data retained')
  # Font-first path and validation.
  nav('schriften');page.locator('[data-font="2"]').click();page.locator('#customText').fill('Vom Schriftatelier')
  page.get_by_role('button',name='Mit Motiv kombinieren').click();assert page.locator('#wishText').input_value()=='Vom Schriftatelier'

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TESTVERSION – TimberArt Design Studio</title>
     <meta name="robots" content="noindex, nofollow">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://formspree.io/f/xzebgwlg; form-action 'none'; object-src 'none'; base-uri 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'none'; object-src 'none'; base-uri 'self'">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Bebas+Neue&family=Oswald:wght@400;600&family=Libre+Franklin:wght@400;600&family=Braah+One&family=Lilita+One&family=Playfair+Display:wght@400;600&family=Great+Vibes&family=Lobster&family=Bona+Nova:wght@400;600&family=Boogaloo&family=Pacifico&family=Roboto+Slab:wght@400;600&family=Fredoka:wght@400;600&family=Bubblegum+Sans&family=Lily+Script+One&family=Limelight&family=Libre+Caslon+Text&family=Anton&family=Cinzel:wght@400;600&family=Cinzel+Decorative&family=Permanent+Marker&family=Special+Elite&family=Rye&family=Alfa+Slab+One&family=Black+Ops+One&family=Poppins:wght@400;600&family=Raleway:wght@400;600&family=League+Spartan:wght@400;600&family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -58,10 +58,10 @@
     <link rel="stylesheet" href="studio.css">
     <link rel="stylesheet" href="text-frame.css">
     <link rel="stylesheet" href="atelier.css">
-    <link rel="stylesheet" href="design-inquiry.css">
+    <link rel="stylesheet" href="png-export.css">
 </head>
 <body>
-    <aside class="preview-banner" aria-label="Testversion"><strong>TESTVERSION · Unverbindliche Vorschau</strong><span>Keine Bestellungen. Designanfragen können bewusst über Formspree an TimberArt gesendet werden; Testbestellformulare bleiben deaktiviert.</span></aside>
+    <aside class="preview-banner" aria-label="Testversion"><strong>TESTVERSION · Unverbindliche Vorschau</strong><span>Gestalte dein Motiv und speichere es als PNG. Keine Bestellungen und kein Versand von Kundendaten.</span></aside>
     <noscript><p class="preview-form-note">TESTVERSION: Bestellungen sind deaktiviert. Für die Vorschau bitte JavaScript aktivieren.</p></noscript>
     <a class="skip-link" href="#content">Zum Inhalt</a>
     <header class="studio-header">
@@ -83,8 +83,7 @@
             <h2 id="modalTitle" style="font-size: 20px; margin-bottom: 0.5rem;"></h2>
             <p id="modalCategory" style="font-size: 12px; color: #666; margin-bottom: 1.5rem;"></p>
             <button class="action primary" onclick="personalStart(selectedDesign.id)">Personalisieren</button>
-            <button type="button" class="action" data-inquiry="motif">Design an TimberArt senden</button>
-            <button class="btn-primary" onclick="closeImageModal(); setTimeout(() => openDesignOrderForm(), 100)">Testbestellung ausprobieren</button>
+            <button type="button" class="action" data-png-export="motif">Design als PNG speichern</button>
         </div>
     </div>
     <div id="modal" class="modal">
@@ -105,49 +104,8 @@
                 <div class="modal-buttons">
                     <button class="btn-secondary" onclick="closeModal()">Abbrechen</button>
                     <button class="action primary" onclick="personalFromFont()">Mit Motiv kombinieren</button>
-                    <button class="btn-primary" onclick="nextStep()">Diese Schrift auswählen</button>
                 </div>
             </div>
-            <div id="step2" class="modal-step">
-                <h2>Testbestellung ausprobieren</h2>
-                <div id="selection-summary" style="background: #e8f5e9; margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; border-left: 4px solid #2d5016;"></div>
-                <p class="preview-form-note">TESTVERSION: Bitte nur Testdaten eingeben. Es wird nichts versendet und keine Bestellung ausgelöst.</p>
-                <form class="order-form" id="orderForm" onsubmit="submitOrder(event)">
-                    <div class="form-group"><label>Name *</label><input type="text" name="name" required></div>
-                    <div class="form-group"><label>Email</label><input type="email" name="email"></div>
-                    <div class="form-group"><label>Telefon</label><input type="tel" name="phone"></div>
-                    <div class="form-group"><label>Nachricht</label><textarea name="message" placeholder="Spezialwünsche..."></textarea></div>
-                    <div class="modal-buttons">
-                        <button type="button" class="btn-secondary" onclick="previousStep()">Zurück</button>
-                        <button type="submit" class="btn-primary">Testbestellung ausprobieren</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <div id="designOrderModal" class="modal">
-        <div class="modal-content" style="max-width: 700px;">
-            <button class="modal-close" onclick="closeDesignOrderForm()">✕</button>
-            <h2 style="color: #2d5016; margin-bottom: 1.5rem; font-size: 20px;">Testbestellung für Design</h2>
-            <div class="design-info">
-                <strong style="display: block; margin-bottom: 0.5rem;">✅ Gewähltes Design:</strong>
-                <div style="font-size: 14px; color: #333;">
-                    <strong id="designName"></strong><br>
-                    <span style="font-size: 12px; color: #666;">Kategorie: <span id="designCat"></span></span><br>
-                    <a id="designLink" href="" target="_blank" style="font-size: 12px; color: #2d5016; text-decoration: none; font-weight: 600;">Design-Link öffnen →</a>
-                </div>
-            </div>
-            <p class="preview-form-note">TESTVERSION: Bitte nur Testdaten eingeben. Es wird nichts versendet und keine Bestellung ausgelöst.</p>
-                <form class="order-form" id="designOrderForm" onsubmit="submitDesignOrder(event)">
-                <div class="form-group"><label>Name *</label><input type="text" name="name" required></div>
-                <div class="form-group"><label>Email</label><input type="email" name="email"></div>
-                <div class="form-group"><label>Telefon</label><input type="tel" name="phone"></div>
-                <div class="form-group"><label>Nachricht</label><textarea name="message" placeholder="Spezialwünsche..."></textarea></div>
-                <div class="modal-buttons">
-                    <button type="button" class="btn-secondary" onclick="closeDesignOrderForm()">Abbrechen</button>
-                    <button type="submit" class="btn-primary">Testbestellung ausprobieren</button>
-                </div>
-            </form>
         </div>
     </div>
     <script>
@@ -209,31 +167,11 @@
         function renderFavorites() { const content = document.getElementById("content"); if (favorites.length === 0) { content.innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Keine Favoriten gespeichert</p>'; return; } let html = '<h2 class="category-title">❤️ Meine Favoriten</h2><div class="grid-5">'; allDesigns.forEach(design => { if (favorites.includes(design.id)) html += renderDesignCard(design); }); html += '</div>'; content.innerHTML = html; }
         function openImageModal(imageId, imageName, fullPath) { selectedDesign = { id: imageId, name: imageName, category: fullPath }; setMotifImage(document.getElementById('modalImage'), imageId, {detail:true, sizes:'(max-width:760px) 90vw, 700px'}); document.getElementById('modalTitle').textContent = imageName; document.getElementById('modalCategory').textContent = fullPath; document.getElementById('imageModal').classList.add('active'); }
         function closeImageModal() { document.getElementById('imageModal').classList.remove('active'); }
-        function openDesignOrderForm() { if (!selectedDesign) return; document.getElementById('designName').textContent = selectedDesign.name; document.getElementById('designCat').textContent = selectedDesign.category; document.getElementById('designLink').href = motifDetailUrl(selectedDesign.id); document.getElementById('designOrderModal').classList.add('active'); }
-        function closeDesignOrderForm() { document.getElementById('designOrderModal').classList.remove('active'); }
-        function openFontModal(index) { const font = FONTS[index]; selectedFont = { ...font, index: index + 1, customText: "HEINZ" }; document.getElementById("customText").value = "HEINZ"; document.getElementById("customText").oninput = updateLivePreview; document.getElementById("selectedFontName").textContent = `${font.name} (#${index + 1})`; updateLivePreview(); document.getElementById("step1").classList.add("active"); document.getElementById("step2").classList.remove("active"); document.getElementById("modal").classList.add("active"); }
+        function openFontModal(index) { const font = FONTS[index]; selectedFont = { ...font, index: index + 1, customText: "HEINZ" }; document.getElementById("customText").value = "HEINZ"; document.getElementById("customText").oninput = updateLivePreview; document.getElementById("selectedFontName").textContent = `${font.name} (#${index + 1})`; updateLivePreview(); document.getElementById("step1").classList.add("active"); document.getElementById("modal").classList.add("active"); }
         function updateLivePreview() { const text = document.getElementById("customText").value || "HEINZ"; selectedFont.customText = text; const preview = document.getElementById("livePreview"); const alphabet = document.getElementById("alphabetPreview"); preview.style.fontFamily = selectedFont.family; alphabet.style.fontFamily = selectedFont.family; preview.textContent = text; alphabet.textContent = "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 !@#$%^&*()"; }
-        function nextStep() { if (!selectedFont) return; document.getElementById("step1").classList.remove("active"); document.getElementById("step2").classList.add("active"); const summary = document.getElementById("selection-summary"); summary.innerHTML = `<strong style="display: block; margin-bottom: 0.5rem;">✅ Gewählte Schrift:</strong><div style="font-family: ${selectedFont.family}; font-size: 48px; margin-bottom: 1rem; line-height: 1.4; word-break: break-word;">${studioEscape(selectedFont.customText)}</div><div style="font-size: 14px; color: #666;"><strong>${selectedFont.name}</strong> (Schrift #${selectedFont.index})<br><span style="font-size: 12px;">Dein Text: "${studioEscape(selectedFont.customText)}"</span></div>`; }
-        function previousStep() { document.getElementById("step1").classList.add("active"); document.getElementById("step2").classList.remove("active"); }
         function closeModal() { document.getElementById("modal").classList.remove("active"); selectedFont = null; }
-        function previewOrder(e) {
-            e.preventDefault();
-            const form = e.target;
-            let status = form.querySelector('.preview-order-status');
-            if (!status) {
-                status = document.createElement('p');
-                status.className = 'preview-form-note preview-order-status';
-                status.setAttribute('role', 'status');
-                status.tabIndex = -1;
-                form.appendChild(status);
-            }
-            status.textContent = 'TESTVERSION: Test abgeschlossen. Es wurden keine Daten versendet und keine Bestellung aufgegeben.';
-            status.focus();
-        }
-        // Also block native submission before inline handlers run.
+        // The market-stand app never submits forms, including native submissions.
         document.addEventListener('submit', e => e.preventDefault(), true);
-        function submitOrder(e) { previewOrder(e); }
-        function submitDesignOrder(e) { previewOrder(e); }
         function loadFavorites() { const saved = localStorage.getItem("timberart-favorites"); favorites = saved ? JSON.parse(saved) : []; }
         function toggleFavorite(e, id) {
             e.stopPropagation();
@@ -243,7 +181,7 @@
             favorites = next;
             return true;
         }
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeImageModal(); closeDesignOrderForm(); closeModal(); } });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeImageModal(); closeModal(); } });
     </script>
     <script src="motif-images.js"></script>
     <script src="studio.js"></script>
@@ -251,6 +189,6 @@
     <script src="text-frame.js"></script>
     <script src="personal.js"></script>
     <script src="design-export.js"></script>
-    <script src="design-inquiry.js"></script>
+    <script src="png-export.js"></script>
 </body>
 </html>
