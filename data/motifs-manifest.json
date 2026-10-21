@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-20T14:59:09.327857+00:00",
+  "generatedAt": "2026-10-21T13:47:01.779154+00:00",
   "generator": {
     "version": 1,
     "edges": [
@@ -30,13 +30,13 @@
         "modifiedTime": "2026-09-28T16:05:00.858Z",
         "md5Checksum": "d07f5c9f4795790c65e73228552a785b",
         "size": "1740790",
-        "version": "3",
+        "version": "7",
         "mimeType": "image/png",
         "folderIds": [
           "1uOxlTIRaiiP9csRZQ4z005HMVOu9mt_M"
         ]
       },
-      "sourceFingerprint": "e9524150bae504ccf7d7ca726fed8236a832dd1f203e6c60075f918beafdfff4",
+      "sourceFingerprint": "d9af29eb482b5c4298d4c0b6985b705350c33bbbcfbae4934e8b8f5ec115dbef",
       "previewSource": {
         "kind": "Authenticated read-only raster source; never published",
         "sha256": "cb44573e1d69fb2302057baffd139c1e7fd59edd23d9e69e3435617460166080",
